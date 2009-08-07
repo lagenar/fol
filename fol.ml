@@ -47,47 +47,6 @@ let rec formula_to_str formula =
     | Exists(c, f) -> "Exists(" ^ Char.escaped(c) ^ ")" ^ "(" ^ formula_to_str(f) ^ ")"
     | Forall(c, f) -> "Forall(" ^ Char.escaped(c) ^ ")" ^ "(" ^ formula_to_str(f) ^ ")";;
 
-(* applies recursively the double negation simplification:
-   ~~F = F*)
-let rec double_negation_simplify formula =
-  match formula with
-      Neg(f) -> let r = double_negation_simplify(f) in
-	(match r with
-	    Neg(f) -> f
-	  | form -> Neg(form))
-    | Atom(c, args) -> Atom(c, args)
-    | And(f1, f2) -> And(double_negation_simplify(f1),
-			 double_negation_simplify(f2))
-    | Or(f1, f2) -> Or(double_negation_simplify(f1),
-		       double_negation_simplify(f2))
-    | Imp(f1, f2) -> Imp(double_negation_simplify(f1),
-			 double_negation_simplify(f2))
-    | Forall(c, f) -> Forall(c, double_negation_simplify(f))
-    | Exists(c, f) -> Exists(c, double_negation_simplify(f));;
-
-(* De Morgan simplification:
-   ~(a ^ b) = ~a v ~b
-   ~(a v b) = ~a ^ ~b *)
-let rec de_morgan_simplify formula =
-  match formula with
-      Neg(f) -> (match f with
-		     And(f1, f2) -> Or(de_morgan_simplify(Neg(f1)),
-				       de_morgan_simplify(Neg(f2)))
-		   | Or(f1, f2) -> And(de_morgan_simplify(Neg(f1)),
-				       de_morgan_simplify(Neg(f2)))
-		   | Neg(form) -> de_morgan_simplify(form)
-		   | form -> Neg(de_morgan_simplify(form)))
-		       
-    | Atom(c, args) -> Atom(c, args)
-    | And(f1, f2) -> And(de_morgan_simplify(f1),
-			 de_morgan_simplify(f2))
-    | Or(f1, f2) -> Or(de_morgan_simplify(f1),
-		       de_morgan_simplify(f2))
-    | Imp(f1 ,f2) -> Imp(de_morgan_simplify(f1),
-			 de_morgan_simplify(f2))	
-    | Forall(c, f) -> Forall(c, de_morgan_simplify(f))
-    | Exists(c, f) -> Exists(c, de_morgan_simplify(f));;
-
 (* transforms implications applying the rule a -> b = ~a v b *)
 let rec implication_simplify formula =
   match formula with
@@ -102,27 +61,20 @@ let rec implication_simplify formula =
     | Forall(c, f) -> Forall(c, implication_simplify(f))
     | Exists(c, f) -> Exists(c, implication_simplify(f));;
 
-(* ~ForAll(x)A(x) = Exists(x)~A(x)
-   ~Exists(x)A(x) = ForAll(x)~A(x) *)
-let rec negated_quantifiers_simplify formula =
-  match formula with
-      Neg(subform) -> let r = negated_quantifiers_simplify(subform) in
-	(match r with
-	     Forall(c, f) -> Exists(c, negated_quantifiers_simplify(Neg(f)))
-	   | Exists(c, f) -> Forall(c, negated_quantifiers_simplify(Neg(f)))
-	   | form -> Neg(form))
-	  
-    | Atom(c, args) -> Atom(c, args)
-    | And(f1, f2) -> And(negated_quantifiers_simplify(f1),
-			 negated_quantifiers_simplify(f2))
-    | Or(f1, f2) -> Or(negated_quantifiers_simplify(f1),
-		       negated_quantifiers_simplify(f2))
-    | Imp(f1, f2) -> Imp(negated_quantifiers_simplify(f1),
-			 negated_quantifiers_simplify(f2))
-    | Forall(c, f) -> Forall(c, negated_quantifiers_simplify(f))
-    | Exists(c, f) -> Exists(c, negated_quantifiers_simplify(f));;
-
+let rec move_not_inwards  =
+  function
+      And(f1,f2) -> And(move_not_inwards(f1), move_not_inwards(f2))
+    | Or(f1,f2) -> Or(move_not_inwards(f1), move_not_inwards(f2))
+    | Imp(f1,f2) -> Imp(move_not_inwards(f1), move_not_inwards(f2))
+    | Forall(c,f) -> Forall(c, move_not_inwards(f))
+    | Exists(c,f) -> Exists(c, move_not_inwards(f))
+    | Neg(And(f1,f2)) -> Or(move_not_inwards(Neg(f1)), move_not_inwards(Neg(f2)))
+    | Neg(Or(f1,f2)) -> And(move_not_inwards(Neg(f1)), move_not_inwards(Neg(f2)))
+    | Neg(Forall(c,f)) -> Exists(c, move_not_inwards(Neg(f)))
+    | Neg(Exists(c,f)) -> Forall(c, move_not_inwards(Neg(f)))
+    | Neg(Neg(f)) -> move_not_inwards(f)
+    | Neg(f) -> Neg(move_not_inwards(f))
+    | f -> f
+;;
 let negation_normal_form formula =
-  double_negation_simplify(de_morgan_simplify(
-			     implication_simplify(
-			       negated_quantifiers_simplify(formula))));;
+  move_not_inwards(implication_simplify(formula));;
