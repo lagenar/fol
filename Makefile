@@ -13,4 +13,4 @@ parser.cmo: parser.ml
 lexer.cmo: lexer.ml parser.cmo
 	ocamlc -c lexer.ml
 clean:
-	rm -f *.cmo *.cmi lexer.ml parser.ml *~ \#*
+	rm -f *.cmo *.cmi parser.mli lexer.ml parser.ml *~ \#*

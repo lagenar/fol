@@ -23,14 +23,14 @@ main:
   ;
 quant_formula:
   PREDICATE LPAREN args RPAREN  { Fol.Atom($1, $3) }
-  | NOT quant_formula { Fol.Neg($2) }
+  | NOT quant_formula { Fol.Not($2) }
   | LPAREN formula RPAREN { $2 }
 ;
 formula:
   formula IMP formula { Fol.Imp($1, $3) }
   | formula OR formula { Fol.Or($1, $3) }
   | formula AND formula { Fol.And($1, $3) }
-  | NOT formula { Fol.Neg($2) }
+  | NOT formula { Fol.Not($2) }
   | LPAREN formula RPAREN { $2 }
   | PREDICATE LPAREN args RPAREN  { Fol.Atom($1, $3) }
   | FORALL LPAREN EXP_ID RPAREN quant_formula { Fol.Forall($3, $5) }
