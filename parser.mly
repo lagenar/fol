@@ -42,6 +42,6 @@ args:
 ;
 expr:
   EXP_ID LPAREN args RPAREN { Fol.FOLfunction($1, $3) }
-  | EXP_ID { Fol.Atm(Fol.Var($1)) }
+  | EXP_ID { Fol.Var($1) }
 ;
 

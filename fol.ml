@@ -1,11 +1,9 @@
-type atomic_term = Var of char
-		   | Constant of char;;
-		   
 (* non-empty arguments list of a function or predicate *)
 type 'a arguments = Arg of 'a | Arguments of 'a * 'a arguments;;
 
 (* a logical term is either an atomic term or a function *)
-type term = Atm of atomic_term
+type term = Var of char
+	    | Constant of char
 	    | FOLfunction of char * term arguments;;
 
 (* a first order logic formula *)
@@ -19,8 +17,8 @@ type formula = Atom of char * term arguments
 
 let rec term_to_str t =
   match t with
-      Atm(Var(c)) -> Char.escaped(c)
-    | Atm(Constant(c)) -> Char.escaped(c)
+      Var(c) -> Char.escaped(c)
+    | Constant(c) -> Char.escaped(c)
     | FOLfunction(c, args) -> Char.escaped(c) ^ "(" ^ args_to_str(args) ^ ")"
 and args_to_str args =
   match args with
@@ -79,3 +77,27 @@ let rec move_not_inwards  =
 
 let negation_normal_form formula =
   move_not_inwards(implication_simplify(formula));;
+
+module VarsSet = Set.Make(struct type t = char let compare = compare end);;
+
+let rec argument_variables =
+  function Arg(t) ->
+    (match t with
+	 Var(c) -> VarsSet.add c VarsSet.empty
+       | FOLfunction(_, args) -> argument_variables args
+       | _ -> VarsSet.empty)
+    | Arguments(Var(c), rest) -> VarsSet.add c (argument_variables rest)
+    | Arguments(Constant(c), rest) -> argument_variables rest
+    | Arguments(FOLfunction(_, args), rest) ->
+	VarsSet.union (argument_variables(args)) (argument_variables(rest))
+;;
+
+let rec free_variables =
+  function Atom(c, args) -> argument_variables(args)
+    | And(f1, f2)
+    | Or(f1, f2)
+    | Imp(f1, f2) -> VarsSet.union (free_variables f1) (free_variables f2)
+    | Not(f) -> free_variables(f)
+    | Exists(c, f) 
+    | Forall(c, f) -> VarsSet.remove c (free_variables f)
+;;
