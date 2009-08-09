@@ -101,3 +101,35 @@ let rec free_variables =
     | Exists(c, f) 
     | Forall(c, f) -> VarsSet.remove c (free_variables f)
 ;;
+
+let rec miniscope =
+  function
+      Forall(c, f) ->
+	let mf = miniscope f in
+	  (match mf with
+	       And(f1, f2) ->
+		 if not (VarsSet.mem c (free_variables f2)) then And(miniscope(Forall(c, f1)), f2)
+		 else if not (VarsSet.mem c (free_variables f1)) then And(f1, miniscope(Forall(c, f2)))
+		 else And(miniscope(Forall(c, f1)), miniscope(Forall(c, f2)))
+	     | Or(f1, f2) ->
+		 if not (VarsSet.mem c (free_variables f2)) then Or(miniscope(Forall(c, f1)), f2)
+		 else if not (VarsSet.mem c (free_variables f1)) then Or(f1, miniscope(Forall(c, f2)))
+		 else Or(miniscope(Forall(c, f1)), miniscope(Forall(c, f2)))
+	     | _ -> Forall(c, mf))
+    | Exists(c, f) ->
+	let mf = miniscope f in
+	  (match mf with
+	       And(f1, f2) ->
+		 if not (VarsSet.mem c (free_variables f2)) then And(miniscope(Exists(c, f1)), f2)
+		 else if not (VarsSet.mem c (free_variables f1)) then And(f1, miniscope(Exists(c, f2)))
+		 else And(miniscope(Exists(c, f1)), miniscope(Exists(c, f2)))
+	     | Or(f1, f2) ->
+		 if not (VarsSet.mem c (free_variables f2)) then Or(miniscope(Exists(c, f1)), f2)
+		 else if not (VarsSet.mem c (free_variables f1)) then Or(f1, miniscope(Exists(c, f2)))
+		 else Or(miniscope(Exists(c, f1)), miniscope(Exists(c, f2)))
+	     | _ -> Exists(c, mf))
+    | Atom(_, _) as a -> a
+    | Not(f) -> Not(miniscope(f))
+    | And(f1, f2) -> And(miniscope(f1), miniscope(f2))
+    | Or(f1, f2) -> Or(miniscope(f1), miniscope(f2))
+;;
