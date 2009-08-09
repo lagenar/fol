@@ -27,14 +27,14 @@ quant_formula:
   | LPAREN formula RPAREN { $2 }
 ;
 formula:
-  formula IMP formula { Fol.Imp($1, $3) }
-  | formula OR formula { Fol.Or($1, $3) }
-  | formula AND formula { Fol.And($1, $3) }
+  formula IMP formula { Fol.Connective(Fol.Imp, $1, $3) }
+  | formula OR formula { Fol.Connective(Fol.Or, $1, $3) }
+  | formula AND formula { Fol.Connective(Fol.And, $1, $3) }
   | NOT formula { Fol.Not($2) }
   | LPAREN formula RPAREN { $2 }
   | PREDICATE LPAREN args RPAREN  { Fol.Atom($1, $3) }
-  | FORALL LPAREN EXP_ID RPAREN quant_formula { Fol.Forall($3, $5) }
-  | EXISTS LPAREN EXP_ID RPAREN quant_formula { Fol.Exists($3, $5) }
+  | FORALL LPAREN EXP_ID RPAREN quant_formula { Fol.Quantifier(Fol.Forall, $3, $5) }
+  | EXISTS LPAREN EXP_ID RPAREN quant_formula { Fol.Quantifier(Fol.Exists, $3, $5) }
 ;
 args:
   expr COMMA args { Fol.Arguments($1, $3) }
