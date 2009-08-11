@@ -105,13 +105,24 @@ let rec miniscope =
 	let mf = miniscope f in
 	  (match mf with
 	       Connective(con, f1, f2) ->
-		 if not (CharSet.mem c (free_variables f2)) then
-		   Connective(con, miniscope(Quantifier(q, c, f1)), f2)
-		 else if not (CharSet.mem c (free_variables f1)) then
-		   Connective(con, f1, miniscope(Quantifier(q, c, f2)))
-		 else
-		   Connective(con, miniscope(Quantifier(q, c, f1)), miniscope(Quantifier(q, c, f2)))
-	     | _ -> Quantifier(q, c, mf))
+		 let freef1 = free_variables f1 and
+		     freef2 = free_variables f2 in
+		   if not (CharSet.mem  c freef1) && not (CharSet.mem c freef2) then
+		     Connective(con, miniscope(f1), miniscope(f2))
+		   else if not (CharSet.mem c freef2) then
+		     Connective(con, miniscope(Quantifier(q, c, f1)), f2)
+		   else if not (CharSet.mem c freef1) then
+		     Connective(con, f1, miniscope(Quantifier(q, c, f2)))
+		   else
+		     (match (q,con) with
+			  (Forall, And) ->
+			    Connective(And, miniscope(Quantifier(Forall, c, f1))
+					 , miniscope(Quantifier(Forall, c, f2)))
+			| (Exists, Or) ->
+			    Connective(Or, miniscope(Quantifier(Exists, c, f1))
+					 , miniscope(Quantifier(Exists, c, f2)))
+			| _ -> Quantifier(q, c, mf))
+             | _ -> Quantifier(q, c, mf))
     | Connective(c, f1, f2) -> Connective(c, miniscope(f1), miniscope(f2))
     | Not(f) -> Not(miniscope(f))
     | f -> f
@@ -138,9 +149,44 @@ let rec term_symbols  =
 ;;
 
 let alpha_set =
-  List.fold_right (CharSet.add)
+  List.fold_right CharSet.add
     ['a';'b';'c';'d';'e';'f';'g';'h';'i';'j';'k';'l';'m';'n';
      'o';'p';'q';'r';'s';'t';'u';'v';'w';'x';'y';'z']
     CharSet.empty
 ;;
-  
+
+type substitution = {v : char; sv : char};;
+
+let rec apply_substitution subs =
+  function Arg(t) ->
+    (match t with
+	 Var(c) -> Arg(Var (List.find (fun x -> x.v = c) subs).sv)
+       | FOLfunction(f, args) -> Arg(FOLfunction(f, apply_substitution subs args))
+       | _ -> Arg(t))
+    | Arguments(Var(c), rest) ->
+	Arguments(Var (List.find (fun x -> x.v = c) subs).sv, apply_substitution subs rest)
+    | Arguments(Constant(c), rest) ->
+	Arguments(Constant(c), apply_substitution subs rest)
+    | Arguments(FOLfunction(f, args), rest) ->
+	Arguments(FOLfunction(f, apply_substitution subs args),
+		 apply_substitution subs rest)
+;;
+
+let rename_variables formula =
+  let rec ren formula subs unused_symbols =
+    match formula with
+	Atom(c, args) -> (Atom(c, apply_substitution subs args), unused_symbols)
+      | Connective(c, f1, f2) ->
+	  let r1 = ren f1 subs unused_symbols in
+	  let r2 = ren f2 subs (snd r1) in
+	    (Connective(c, fst r1, fst r2), snd r2)
+      | Not(f) ->
+	  let r = ren f subs unused_symbols in
+	    (Not(fst r), snd r)
+      | Quantifier(q, c, f) ->
+	  let sub = {v=c; sv=(List.hd unused_symbols)} in
+	  let r = ren f (sub::subs) (List.tl unused_symbols) in
+	    (Quantifier(q, List.hd unused_symbols, fst r), snd r)
+  in
+  fst ( ren formula [] (CharSet.elements(CharSet.diff alpha_set (term_symbols formula))))
+;;
