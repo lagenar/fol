@@ -155,16 +155,22 @@ let alpha_set =
     CharSet.empty
 ;;
 
-type substitution = {v : char; sv : char};;
+type substitution = {v : char; sv : term};;
 
 let rec apply_substitution subs =
   function Arg(t) ->
     (match t with
-	 Var(c) -> Arg(Var (List.find (fun x -> x.v = c) subs).sv)
+	 Var(c) ->
+	   (try
+	      Arg(List.find (fun x -> x.v = c) subs).sv
+	    with _ -> Arg(t))
        | FOLfunction(f, args) -> Arg(FOLfunction(f, apply_substitution subs args))
        | _ -> Arg(t))
     | Arguments(Var(c), rest) ->
-	Arguments(Var (List.find (fun x -> x.v = c) subs).sv, apply_substitution subs rest)
+	(try
+	   Arguments((List.find (fun x -> x.v = c) subs).sv,
+		     apply_substitution subs rest)
+	with _ -> Arguments(Var(c), apply_substitution subs rest))
     | Arguments(Constant(c), rest) ->
 	Arguments(Constant(c), apply_substitution subs rest)
     | Arguments(FOLfunction(f, args), rest) ->
@@ -184,9 +190,41 @@ let rename_variables formula =
 	  let r = ren f subs unused_symbols in
 	    (Not(fst r), snd r)
       | Quantifier(q, c, f) ->
-	  let sub = {v=c; sv=(List.hd unused_symbols)} in
+	  let sub = {v=c; sv=Var(List.hd unused_symbols)} in
 	  let r = ren f (sub::subs) (List.tl unused_symbols) in
 	    (Quantifier(q, List.hd unused_symbols, fst r), snd r)
   in
   fst ( ren formula [] (CharSet.elements(CharSet.diff alpha_set (term_symbols formula))))
 ;;
+
+let skolemize formula =
+  let rec list_to_args l =
+    if (List.tl l) = [] then Arg(Var(List.hd l))
+    else Arguments(Var(List.hd l), list_to_args (List.tl l))
+  in
+  let rec skol f bound_vars subs unused_symbols =
+    match f with
+	Atom(c, args) ->
+	    (Atom(c, apply_substitution subs  args), unused_symbols)
+      | Connective(c, f1, f2) ->
+	  let r1 = skol f1 bound_vars subs unused_symbols in
+	  let r2 = skol f2 bound_vars subs (snd r1) in
+	    (Connective(c, fst r1, fst r2), snd r2)
+      | Not(f) ->
+	  let r = skol f bound_vars subs unused_symbols in
+	    (Not(fst r), snd r)
+      | Quantifier(Forall, c, f) ->
+	  let r = skol f (c::bound_vars) subs unused_symbols in
+	    (Quantifier(Forall, c, fst r), snd r)
+      | Quantifier(Exists, c, f) ->
+	  let t =
+	    if bound_vars = [] then
+	      Constant(List.hd unused_symbols)
+	    else
+	       FOLfunction(List.hd unused_symbols, list_to_args bound_vars) in
+	    skol f bound_vars ({v=c; sv=t}::subs) (List.tl unused_symbols)
+  in
+    fst(skol formula []
+	  [] (CharSet.elements(CharSet.diff alpha_set (term_symbols formula))))
+;;
+  
