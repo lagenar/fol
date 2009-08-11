@@ -77,26 +77,26 @@ let rec move_not_inwards  =
 let negation_normal_form formula =
   move_not_inwards(implication_simplify(formula));;
 
-module VarsSet = Set.Make(struct type t = char let compare = compare end);;
+module CharSet = Set.Make(struct type t = char let compare = compare end);;
 
 let rec argument_variables =
   function Arg(t) ->
     (match t with
-	 Var(c) -> VarsSet.add c VarsSet.empty
+	 Var(c) -> CharSet.add c CharSet.empty
        | FOLfunction(_, args) -> argument_variables args
-       | _ -> VarsSet.empty)
-    | Arguments(Var(c), rest) -> VarsSet.add c (argument_variables rest)
+       | _ -> CharSet.empty)
+    | Arguments(Var(c), rest) -> CharSet.add c (argument_variables rest)
     | Arguments(Constant(c), rest) -> argument_variables rest
     | Arguments(FOLfunction(_, args), rest) ->
-	VarsSet.union (argument_variables(args)) (argument_variables(rest))
+	CharSet.union (argument_variables(args)) (argument_variables(rest))
 ;;
 
 let rec free_variables =
   function Atom(c, args) -> argument_variables(args)
     | Connective(c, f1, f2)  ->
-	VarsSet.union (free_variables f1) (free_variables f2)	
+	CharSet.union (free_variables f1) (free_variables f2)	
     | Not(f) -> free_variables(f)
-    | Quantifier(q, c, f) -> VarsSet.remove c (free_variables f)
+    | Quantifier(q, c, f) -> CharSet.remove c (free_variables f)
 ;;
 
 let rec miniscope =
@@ -105,9 +105,9 @@ let rec miniscope =
 	let mf = miniscope f in
 	  (match mf with
 	       Connective(con, f1, f2) ->
-		 if not (VarsSet.mem c (free_variables f2)) then
+		 if not (CharSet.mem c (free_variables f2)) then
 		   Connective(con, miniscope(Quantifier(q, c, f1)), f2)
-		 else if not (VarsSet.mem c (free_variables f1)) then
+		 else if not (CharSet.mem c (free_variables f1)) then
 		   Connective(con, f1, miniscope(Quantifier(q, c, f2)))
 		 else
 		   Connective(con, miniscope(Quantifier(q, c, f1)), miniscope(Quantifier(q, c, f2)))
@@ -116,4 +116,31 @@ let rec miniscope =
     | Not(f) -> Not(miniscope(f))
     | f -> f
 ;;
-		 		     
+
+let rec argument_symbols =
+  function Arg(t) ->
+    (match t with
+	 Var(c) -> CharSet.add c CharSet.empty
+       | FOLfunction(f, args) -> CharSet.add f (argument_symbols args)
+       | Constant(c) -> CharSet.add c CharSet.empty)
+    | Arguments(Var(c), rest) -> CharSet.add c (argument_symbols rest)
+    | Arguments(Constant(c), rest) -> CharSet.add c (argument_symbols rest)
+    | Arguments(FOLfunction(f, args), rest) ->
+	CharSet.add f (CharSet.union (argument_symbols(args)) (argument_symbols(rest)))
+;;
+
+let rec term_symbols  =
+  function Atom(c, args) -> argument_symbols(args)
+    | Connective(c, f1, f2) ->
+	CharSet.union (term_symbols f1) (term_symbols f2)
+    | Not(f) -> term_symbols(f)
+    | Quantifier(q, c, f) -> term_symbols f
+;;
+
+let alpha_set =
+  List.fold_right (CharSet.add)
+    ['a';'b';'c';'d';'e';'f';'g';'h';'i';'j';'k';'l';'m';'n';
+     'o';'p';'q';'r';'s';'t';'u';'v';'w';'x';'y';'z']
+    CharSet.empty
+;;
+  
