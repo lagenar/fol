@@ -241,8 +241,12 @@ let rec move_quant_outwards  =
 	  else
 	    Connective(con, r1, r2)
     | Connective(c, f1, f2) ->
-	(Connective(c, move_quant_outwards f1,
-		    move_quant_outwards f2))
+	let r1 = move_quant_outwards f1 in
+	let r2 = move_quant_outwards f2 in
+	  (match (r2, r2) with
+	       (Quantifier(_,_,_), _)
+	     | (_, Quantifier(_,_,_)) -> move_quant_outwards (Connective(c, r1, r2))
+	     | _ -> Connective(c, r1, r2))
     | Quantifier(q, c, f) -> Quantifier(q, c, move_quant_outwards f)
 ;;
 
@@ -266,4 +270,3 @@ let rec distribute_or =
     | Quantifier(q, c, f) ->
 	Quantifier(q, c, distribute_or f)
 ;;
-					  
