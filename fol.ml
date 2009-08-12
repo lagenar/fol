@@ -145,7 +145,7 @@ let rec term_symbols  =
     | Connective(c, f1, f2) ->
 	CharSet.union (term_symbols f1) (term_symbols f2)
     | Not(f) -> term_symbols(f)
-    | Quantifier(q, c, f) -> term_symbols f
+    | Quantifier(q, c, f) -> CharSet.add c (term_symbols f)
 ;;
 
 let alpha_set =
@@ -245,3 +245,25 @@ let rec move_quant_outwards  =
 		    move_quant_outwards f2))
     | Quantifier(q, c, f) -> Quantifier(q, c, move_quant_outwards f)
 ;;
+
+let rec distribute_or =
+  function
+      Atom(_, _) as a -> a
+    | Not(f) -> Not(distribute_or(f))
+    | Connective(Or, f1, f2) ->
+	let r1 = distribute_or f1 in
+	let r2 = distribute_or f2 in
+	  (match (r1, r2) with
+	       (_, Connective(And, s1, s2)) ->
+		 Connective(And, distribute_or(Connective(Or, r1, s1))
+			      , distribute_or(Connective(Or, r1, s2)))
+	     | (Connective(And, s1, s2), _) ->
+		 Connective(And, distribute_or(Connective(Or, r2, s1))
+			      , distribute_or(Connective(Or, r2, s2)))
+	     | _ -> Connective(Or, r1, r2))
+    | Connective(c, f1, f2) ->
+	Connective(c, distribute_or f1, distribute_or f2)
+    | Quantifier(q, c, f) ->
+	Quantifier(q, c, distribute_or f)
+;;
+					  
