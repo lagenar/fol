@@ -37,13 +37,13 @@ let rec formula_to_str formula =
 			   Connective(Imp, _, _)
 			 | Connective(Or, _, _) -> "(" ^ formula_to_str(f) ^ ")"
 			 | _ -> formula_to_str(f)) in
-	  paren(f1) ^ "^" ^ paren(f2)
+	  paren(f1) ^ " ^ " ^ paren(f2)
     | Connective(Or, f1, f2) ->
 	let paren f = (match f with
 			   Connective(Imp, _, _) -> "(" ^ formula_to_str(f) ^ ")"
 			 | _ -> formula_to_str(f)) in
-	  paren(f1) ^ "v" ^ paren(f2)
-    | Connective(Imp, f1, f2) -> formula_to_str(f1) ^ "=>" ^ formula_to_str(f2)
+	  paren(f1) ^ " v " ^ paren(f2)
+    | Connective(Imp, f1, f2) -> formula_to_str(f1) ^ " => " ^ formula_to_str(f2)
     | Quantifier(Exists, c, f) -> "Exists(" ^ Char.escaped(c) ^ ")" ^ "(" ^ formula_to_str(f) ^ ")"
     | Quantifier(Forall, c, f) -> "Forall(" ^ Char.escaped(c) ^ ")" ^ "(" ^ formula_to_str(f) ^ ")";;
 
@@ -228,3 +228,20 @@ let skolemize formula =
 	  [] (CharSet.elements(CharSet.diff alpha_set (term_symbols formula))))
 ;;
   
+let rec move_quant_outwards  =
+  function
+      Atom(c, f) as a -> a
+    | Not(f) -> Not(move_quant_outwards f)
+    | Connective(con, Quantifier(q, c, f1), f2)
+    | Connective(con, f2, Quantifier(q, c, f1)) ->
+	let r1 = move_quant_outwards f1 in
+	let r2 = move_quant_outwards f2 in
+	  if not (CharSet.mem c (free_variables r2)) then
+	    Quantifier(q, c, move_quant_outwards(Connective(con, r1, r2)))
+	  else
+	    Connective(con, r1, r2)
+    | Connective(c, f1, f2) ->
+	(Connective(c, move_quant_outwards f1,
+		    move_quant_outwards f2))
+    | Quantifier(q, c, f) -> Quantifier(q, c, move_quant_outwards f)
+;;
