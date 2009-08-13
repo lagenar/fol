@@ -17,4 +17,5 @@ rule token = parse
   | "=>"     { IMP }
   | "Exists" { EXISTS }
   | "ForAll" { FORALL }
+  | "Const" {CONST}
   | eof        { raise Eof }
