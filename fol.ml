@@ -243,7 +243,7 @@ let rec move_quant_outwards  =
     | Connective(c, f1, f2) ->
 	let r1 = move_quant_outwards f1 in
 	let r2 = move_quant_outwards f2 in
-	  (match (r2, r2) with
+	  (match (r1, r2) with
 	       (Quantifier(_,_,_), _)
 	     | (_, Quantifier(_,_,_)) -> move_quant_outwards (Connective(c, r1, r2))
 	     | _ -> Connective(c, r1, r2))
