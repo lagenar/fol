@@ -22,7 +22,7 @@
 %%
 
 main:
-    formula EOL { $1 }
+    formula EOL { arities:= ArityMap.empty; $1 }
   | consts EOL formula EOL { $3 } 
 ;
 formula:

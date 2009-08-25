@@ -285,3 +285,43 @@ let conjuntive_normal_form formula =
 	    negation_normal_form formula))))
 ;;
 					 
+let rec clauses formula =
+  match formula with
+      Connective(And, f1, f2) -> f1::(clauses f2)
+    | Connective(Or, f1, f2) as f -> [f]
+    | Atom(_) as p -> [p]
+    | Quantifier(Forall(_), c, f) -> clauses(f)
+;;
+
+let rec constants formula =
+  let rec cons_args =
+    function Arg (Constant c) -> CharSet.add c CharSet.empty
+      | Arg(FOLfunction(f, args)) -> cons_args(args)
+      | Arg(_) -> CharSet.empty
+      | Arguments(Constant c, rest) ->
+	  CharSet.add c (cons_args rest)
+      | Arguments(FOLfunction(f, args), rest) ->
+	  CharSet.union (cons_args args) (cons_args rest)
+      | Arguments(_, rest) -> cons_args rest
+  in
+    match formula with
+	Not(f) -> constants(f)
+      | Atom(c, args) -> cons_args args
+      | Quantifier(_, _, f) -> constants f
+      | Connective(_, f1, f2) ->
+	  CharSet.union (constants f1) (constants f2)
+;;
+
+let print_clauses formula =
+  let print_constants lc =
+    if lc = [] then print_endline "Const()"
+    else begin
+      Printf.printf "Const(%c" (List.hd lc);
+      List.iter (fun x -> Printf.printf ",%c" x) (List.tl lc);
+      print_endline ")"
+    end
+  in
+    print_constants (CharSet.elements (constants formula));
+    let cls = clauses formula in
+      List.iter (fun x -> print_endline(formula_to_str x)) cls
+;;
