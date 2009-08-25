@@ -16,6 +16,12 @@ type formula = Atom of char * term arguments
 	       | Quantifier of quantifier * char * formula
 ;;
 
+let rec arity args =
+  match args with
+      Arg(_) -> 1
+    | Arguments(_, tl) -> 1 + arity(tl)
+;;
+
 let rec term_to_str t =
   match t with
       Var(c) -> Char.escaped(c)
@@ -270,3 +276,12 @@ let rec distribute_or =
     | Quantifier(q, c, f) ->
 	Quantifier(q, c, distribute_or f)
 ;;
+
+let conjuntive_normal_form formula =
+  distribute_or (
+    move_quant_outwards
+      ( skolemize (
+	  miniscope (
+	    negation_normal_form formula))))
+;;
+					 

@@ -1,5 +1,7 @@
 %{
   let consts_set = ref Fol.CharSet.empty;;
+  module ArityMap = Map.Make(struct type t = char let compare = compare end);;
+  let arities = ref ArityMap.empty;;
 %}
 
 %token <char> PREDICATE
@@ -23,28 +25,55 @@ main:
     formula EOL { $1 }
   | consts EOL formula EOL { $3 } 
 ;
-quant_formula:
-  PREDICATE LPAREN args RPAREN  { Fol.Atom($1, $3) }
-  | NOT quant_formula { Fol.Not($2) }
-  | LPAREN formula RPAREN { $2 }
-;
 formula:
   formula IMP formula { Fol.Connective(Fol.Imp, $1, $3) }
   | formula OR formula { Fol.Connective(Fol.Or, $1, $3) }
   | formula AND formula { Fol.Connective(Fol.And, $1, $3) }
   | NOT formula { Fol.Not($2) }
   | LPAREN formula RPAREN { $2 }
-  | PREDICATE LPAREN args RPAREN  { Fol.Atom($1, $3) }
-  | FORALL LPAREN EXP_ID RPAREN quant_formula { Fol.Quantifier(Fol.Forall, $3, $5) }
-  | EXISTS LPAREN EXP_ID RPAREN quant_formula { Fol.Quantifier(Fol.Exists, $3, $5) }
+  | PREDICATE LPAREN args RPAREN  {
+      let args = $3 in
+      let p = Fol.Atom($1, args) in
+      let ar = Fol.arity args in
+	try
+	  if ArityMap.find $1 !arities != ar then
+	    failwith (Printf.sprintf "Wrong arity for predicate symbol %c" $1)
+	  else p
+	with Not_found ->
+	  arities := (ArityMap.add $1 ar !arities);
+	  p
+    }
+  | FORALL LPAREN EXP_ID RPAREN LPAREN formula RPAREN{
+      if Fol.CharSet.mem $3 !consts_set then
+	failwith (Printf.sprintf "Cannot quantify constant %c" $3)
+      else Fol.Quantifier(Fol.Forall, $3, $6)
+    }
+  | EXISTS LPAREN EXP_ID RPAREN LPAREN formula RPAREN {
+      if Fol.CharSet.mem $3 !consts_set then
+	failwith (Printf.sprintf "Cannot quantify constant %c" $3)
+      else Fol.Quantifier(Fol.Exists, $3, $6)
+    }
 ;
 args:
   expr COMMA args { Fol.Arguments($1, $3) }
   | expr { Fol.Arg($1) }
 ;
 expr:
-  EXP_ID LPAREN args RPAREN { Fol.FOLfunction($1, $3) }
-  | EXP_ID { if Fol.CharSet.mem $1 !consts_set then Fol.Constant($1) else Fol.Var($1) }
+  EXP_ID LPAREN args RPAREN {
+   let args = $3 in
+   let f = Fol.FOLfunction($1, args) in
+   let ar = Fol.arity args in
+     try
+       if ArityMap.find $1 !arities != ar then
+	 failwith (Printf.sprintf "Wrong arity for function symbol %c" $1)
+       else f
+     with Not_found ->
+       arities := (ArityMap.add $1 ar !arities);
+       f
+  }
+  | EXP_ID { if Fol.CharSet.mem $1 !consts_set then Fol.Constant($1)
+	     else Fol.Var($1)
+	   }
 ;
 consts_args:
   EXP_ID { consts_set := (Fol.CharSet.add $1 !consts_set) }
