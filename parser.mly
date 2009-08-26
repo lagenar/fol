@@ -22,8 +22,8 @@
 %%
 
 main:
-    formula EOL { arities:= ArityMap.empty; $1 }
-  | consts EOL formula EOL { $3 } 
+    formula EOL {arities := ArityMap.empty; $1 }
+  | consts EOL formula EOL { arities := ArityMap.empty; $3 } 
 ;
 formula:
   formula IMP formula { Fol.Connective(Fol.Imp, $1, $3) }
