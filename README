@@ -1,3 +1,7 @@
+Dependencias:
+ -- ocaml
+ -- make
+
 Compilar:
 
 ./make
@@ -8,19 +12,19 @@ Ejecutar:
 Formato:
 
 Símbolos de función, constantes y variables
-van en minúsculas
+van en minúscula
 
 Las constantes se definen antes de la formula
 ejemplo:
 Const(a,b,c)
 
-símbolos de predicados van en mayúsculas
+símbolos de predicados van en mayúscula
 
 ejemplos de fórmulas
 
-ForAll(x)P(x)
-P(x)^Q(x)vG(g,f(y))
-Exists(y)(ForAll(x)(P(x,y)^~Q(x,f(y))))
-~P(x)=>E(y)
+ForAll(x)(P(x))
+P(x) ^ Q(x) v G(g,f(y))
+Exists(y)(ForAll(x)(P(x,y) ^ ~Q(x,f(y))))
+~P(x) => E(y)
 
 
