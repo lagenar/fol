@@ -1,7 +1,7 @@
 (* non-empty arguments list of a function or predicate *)
 type 'a arguments = Arg of 'a | Arguments of 'a * 'a arguments;;
 
-(* a logical term is either an atomic term or a function *)
+(* a logical term is either(variable or constant) an atomic term or a function *)
 type term = Var of char
 	    | Constant of char
 	    | FOLfunction of char * term arguments;;
@@ -16,6 +16,9 @@ type formula = Atom of char * term arguments
 	       | Quantifier of quantifier * char * formula
 ;;
 
+module CharSet = Set.Make(struct type t = char let compare = compare end);;
+
+(*number of arguments of a function or predicate*)
 let rec arity args =
   match args with
       Arg(_) -> 1
@@ -53,6 +56,7 @@ let rec formula_to_str formula =
     | Quantifier(Exists, c, f) -> "Exists(" ^ Char.escaped(c) ^ ")" ^ "(" ^ formula_to_str(f) ^ ")"
     | Quantifier(Forall, c, f) -> "Forall(" ^ Char.escaped(c) ^ ")" ^ "(" ^ formula_to_str(f) ^ ")";;
 
+
 (* transforms implications applying the rule a -> b = ~a v b *)
 let rec implication_simplify formula =
   match formula with
@@ -65,6 +69,15 @@ let rec implication_simplify formula =
     | _ -> formula
 ;;
 
+(*applies the rules:
+  double negation: ~~a = a
+  negated quantifiers:
+  ~Exists(x)P(x) = Forall(x)~P(x)
+  ~Forall(x)P(x) = Exists(x)~P(x)
+  de morgan laws:
+  ~(a v b) = ~a ^ ~b
+  ~(a ^ b) = ~a v ~b
+*)
 let rec move_not_inwards  =
   function
       Connective(c, f1, f2) -> Connective(c, move_not_inwards(f1), move_not_inwards(f2))
@@ -80,11 +93,14 @@ let rec move_not_inwards  =
     | f -> f
 ;;
 
+(*A logical formula is in negation normal form if negation occurs
+  only immediately above elementary propositions and {~, v, ^} are
+  the only allowed Boolean connectives
+*)
 let negation_normal_form formula =
   move_not_inwards(implication_simplify(formula));;
 
-module CharSet = Set.Make(struct type t = char let compare = compare end);;
-
+(*Set of variable simbols that appear in the arguments*)
 let rec argument_variables =
   function Arg(t) ->
     (match t with
@@ -97,6 +113,8 @@ let rec argument_variables =
 	CharSet.union (argument_variables(args)) (argument_variables(rest))
 ;;
 
+(* set of free variable symbols(that are not in
+   a quantifier scope*)
 let rec free_variables =
   function Atom(c, args) -> argument_variables(args)
     | Connective(c, f1, f2)  ->
@@ -105,6 +123,21 @@ let rec free_variables =
     | Quantifier(q, c, f) -> CharSet.remove c (free_variables f)
 ;;
 
+(* Rules:
+   Exists(x)(f1 v f2) = Exists(x)(f1) v f2  if not x in free(f2)
+   Exists(x)(f1 ^ f2) = Exists(x)(f1) ^ f2  if not x in free(f2)
+   Forall(x)(f1 v f2) = Forall(x)(f1) v f2  if not x in free(f2)
+   Forall(x)(f1 ^ f2) = Forall(x)(f1) ^ f2  if not x in free(f2)
+
+   Forall(x)(f1 ^ f2) = Forall(x)(f1) ^ Forall(x)(f2)
+   if x in free(f1) and x in free(f2)
+
+   Exists(x)(f1 v f2) = Exists(x)(f1) v Exists(x)(f2)
+   if x in free(f1) and x in free(f2)
+
+   The aim of the rules is to minimize the arity of skolem
+   functions by moving quantifiers as inwards as possible
+*)
 let rec miniscope =
   function
       Quantifier(q, c, f) ->
@@ -134,6 +167,8 @@ let rec miniscope =
     | f -> f
 ;;
 
+(* set of symbols(functions, vars and constants)
+   used as arguments to a predicate *)
 let rec argument_symbols =
   function Arg(t) ->
     (match t with
@@ -146,6 +181,8 @@ let rec argument_symbols =
 	CharSet.add f (CharSet.union (argument_symbols(args)) (argument_symbols(rest)))
 ;;
 
+(* set of function, variables and constants symbols
+   used in a formula *)
 let rec term_symbols  =
   function Atom(c, args) -> argument_symbols(args)
     | Connective(c, f1, f2) ->
@@ -163,6 +200,8 @@ let alpha_set =
 
 type substitution = {v : char; sv : term};;
 
+(* applies a list of variable to term substitution
+   to the predicates arguments*)
 let rec apply_substitution subs =
   function Arg(t) ->
     (match t with
@@ -184,6 +223,8 @@ let rec apply_substitution subs =
 		 apply_substitution subs rest)
 ;;
 
+(* renames variables such that the ocurrences of
+   cuantifiers bind different variable symbols *)
 let rename_variables formula =
   let rec ren formula subs unused_symbols =
     match formula with
@@ -203,6 +244,10 @@ let rename_variables formula =
   fst ( ren formula [] (CharSet.elements(CharSet.diff alpha_set (term_symbols formula))))
 ;;
 
+(* Removes existential quantifiers by replacing
+   variables existentially quantified with new function
+   or constant symbols
+*)
 let skolemize formula =
   let rec list_to_args l =
     if (List.tl l) = [] then Arg(Var(List.hd l))
@@ -233,7 +278,8 @@ let skolemize formula =
     fst(skol formula []
 	  [] (CharSet.elements(CharSet.diff alpha_set (term_symbols formula))))
 ;;
-  
+
+(* moves quantifiers outwards *)  
 let rec move_quant_outwards  =
   function
       Atom(c, f) as a -> a
@@ -256,6 +302,9 @@ let rec move_quant_outwards  =
     | Quantifier(q, c, f) -> Quantifier(q, c, move_quant_outwards f)
 ;;
 
+(* Rules:
+   f1 v (f2 ^ f3) = (f1 v f2) ^ (f1 v f3)
+*)
 let rec distribute_or =
   function
       Atom(_, _) as a -> a
@@ -277,14 +326,15 @@ let rec distribute_or =
 	Quantifier(q, c, distribute_or f)
 ;;
 
-let conjuntive_normal_form formula =
+let clause_normal_form formula =
   distribute_or (
     move_quant_outwards
       ( skolemize (
 	  miniscope (
 	    negation_normal_form formula))))
 ;;
-					 
+
+(* clause normal form formula's list of clauses *)					 
 let rec clauses formula =
   match formula with
       Connective(And, f1, f2) -> f1::(clauses f2)
@@ -293,6 +343,7 @@ let rec clauses formula =
     | Quantifier(Forall(_), c, f) -> clauses(f)
 ;;
 
+(* set of constants symbols *)
 let rec constants formula =
   let rec cons_args =
     function Arg (Constant c) -> CharSet.add c CharSet.empty
