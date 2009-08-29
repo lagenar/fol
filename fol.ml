@@ -93,13 +93,6 @@ let rec move_not_inwards  =
     | f -> f
 ;;
 
-(*A logical formula is in negation normal form if negation occurs
-  only immediately above elementary propositions and {~, v, ^} are
-  the only allowed Boolean connectives
-*)
-let negation_normal_form formula =
-  move_not_inwards(implication_simplify(formula));;
-
 (*Set of variable simbols that appear in the arguments*)
 let rec argument_variables =
   function Arg(t) ->
@@ -114,7 +107,7 @@ let rec argument_variables =
 ;;
 
 (* set of free variable symbols(that are not in
-   a quantifier scope*)
+   a quantifier scope *)
 let rec free_variables =
   function Atom(c, args) -> argument_variables(args)
     | Connective(c, f1, f2)  ->
@@ -123,6 +116,34 @@ let rec free_variables =
     | Quantifier(q, c, f) -> CharSet.remove c (free_variables f)
 ;;
 
+(* Existentially quantifies the appearences of free variables in
+   a formula. Producing a new formula that preserves satisfiability
+   but not necessarily preserves equivalence *)
+let rec quantify_free_variables formula bound_vars =
+  let quant_free free_vars f =
+    CharSet.fold (fun c t -> Quantifier(Exists, c, t)) free_vars f
+  in
+    match formula with
+	Atom(c, args) as p ->
+	  quant_free (CharSet.diff (free_variables p) bound_vars) p
+      | Not(f) -> quantify_free_variables f bound_vars
+      | Connective(c, f1, f2) ->
+	  Connective(c, (quantify_free_variables f1 bound_vars),
+		     (quantify_free_variables f2 bound_vars))
+      | Quantifier(q, c, f) ->
+	  Quantifier(q, c, quantify_free_variables f (CharSet.add c bound_vars))
+;;
+
+(* A logical formula is in negation normal form if negation occurs
+   only immediately above elementary propositions and {~, v, ^} are
+   the only allowed Boolean connectives
+*)
+let negation_normal_form formula =
+  quantify_free_variables
+    (move_not_inwards
+       (implication_simplify formula))
+    CharSet.empty;;
+  
 (* Rules:
    Exists(x)(f1 v f2) = Exists(x)(f1) v f2  if not x in free(f2)
    Exists(x)(f1 ^ f2) = Exists(x)(f1) ^ f2  if not x in free(f2)
