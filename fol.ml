@@ -126,7 +126,7 @@ let rec quantify_free_variables formula bound_vars =
     match formula with
 	Atom(c, args) as p ->
 	  quant_free (CharSet.diff (free_variables p) bound_vars) p
-      | Not(f) -> quantify_free_variables f bound_vars
+      | Not(f) -> Not (quantify_free_variables f bound_vars)
       | Connective(c, f1, f2) ->
 	  Connective(c, (quantify_free_variables f1 bound_vars),
 		     (quantify_free_variables f2 bound_vars))
@@ -361,6 +361,7 @@ let rec clauses formula =
       Connective(And, f1, f2) -> f1::(clauses f2)
     | Connective(Or, f1, f2) as f -> [f]
     | Atom(_) as p -> [p]
+    | Not(_) as f -> [f]
     | Quantifier(Forall(_), c, f) -> clauses(f)
 ;;
 
