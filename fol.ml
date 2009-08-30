@@ -358,7 +358,7 @@ let clause_normal_form formula =
 (* clause normal form formula's list of clauses *)					 
 let rec clauses formula =
   match formula with
-      Connective(And, f1, f2) -> f1::(clauses f2)
+      Connective(And, f1, f2) -> (clauses f1) @ (clauses f2)
     | Connective(Or, f1, f2) as f -> [f]
     | Atom(_) as p -> [p]
     | Not(_) as f -> [f]
