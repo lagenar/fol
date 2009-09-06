@@ -350,9 +350,10 @@ let rec distribute_or =
 let clause_normal_form formula =
   distribute_or (
     move_quant_outwards
-      ( skolemize (
-	  miniscope (
-	    negation_normal_form formula))))
+      ( skolemize
+	  ( rename_variables
+	      ( miniscope (
+		  negation_normal_form formula)))))
 ;;
 
 (* clause normal form formula's list of clauses *)					 
