@@ -246,7 +246,7 @@ let rec apply_substitution subs =
 
 (* renames variables such that the ocurrences of
    cuantifiers bind different variable symbols *)
-let rename_variables formula =
+let rename_variables constant_symbols formula =
   let rec ren formula subs unused_symbols =
     match formula with
 	Atom(c, args) -> (Atom(c, apply_substitution subs args), unused_symbols)
@@ -262,19 +262,21 @@ let rename_variables formula =
 	  let r = ren f (sub::subs) (List.tl unused_symbols) in
 	    (Quantifier(q, List.hd unused_symbols, fst r), snd r)
   in
-  fst ( ren formula [] (CharSet.elements(CharSet.diff alpha_set (term_symbols formula))))
+    fst ( ren formula [] (CharSet.elements(CharSet.diff alpha_set
+					     (CharSet.union constant_symbols
+						(term_symbols formula)))))
 ;;
 
 (* Removes existential quantifiers by replacing
    variables existentially quantified with new function
    or constant symbols
 *)
-let skolemize formula =
+let skolemize constant_symbols formula =
   let rec list_to_args l =
     if (List.tl l) = [] then Arg(Var(List.hd l))
     else Arguments(Var(List.hd l), list_to_args (List.tl l))
   in
-  let rec skol f bound_vars subs unused_symbols =
+   let rec skol f bound_vars subs unused_symbols =
     match f with
 	Atom(c, args) ->
 	    (Atom(c, apply_substitution subs  args), unused_symbols)
@@ -297,7 +299,9 @@ let skolemize formula =
 	    skol f bound_vars ({v=c; sv=t}::subs) (List.tl unused_symbols)
   in
     fst(skol formula []
-	  [] (CharSet.elements(CharSet.diff alpha_set (term_symbols formula))))
+	  [] (CharSet.elements(CharSet.diff alpha_set
+				 (CharSet.union constant_symbols
+				    (term_symbols formula)))))
 ;;
 
 (* moves quantifiers outwards *)  
@@ -347,11 +351,11 @@ let rec distribute_or =
 	Quantifier(q, c, distribute_or f)
 ;;
 
-let clause_normal_form formula =
+let clause_normal_form (formula, constant_symbols) =
   distribute_or (
     move_quant_outwards
-      ( skolemize
-	  ( rename_variables
+      ( skolemize constant_symbols
+	  ( rename_variables constant_symbols
 	      ( miniscope (
 		  negation_normal_form formula)))))
 ;;

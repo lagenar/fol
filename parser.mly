@@ -18,12 +18,12 @@
 %left EXISTS FORALL
 %nonassoc NOT
 %start main
-%type <Fol.formula> main
+%type <(Fol.formula * Fol.CharSet.t)> main
 %%
 
 main:
-    formula EOL {arities := ArityMap.empty; $1 }
-  | consts EOL formula EOL { arities := ArityMap.empty; $3 } 
+    formula EOL {arities := ArityMap.empty; ($1, !consts_set) }
+  | consts EOL formula EOL { arities := ArityMap.empty; ($3, !consts_set) } 
 ;
 formula:
   formula IMP formula { Fol.Connective(Fol.Imp, $1, $3) }
