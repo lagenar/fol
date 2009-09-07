@@ -2,7 +2,7 @@ let _ =
   try
     let lexbuf = Lexing.from_channel stdin in
       while true do
-	Fol.print_clauses(Fol.clause_normal_form(Parser.main Lexer.token lexbuf));
+	Cnl.print_clauses(Cnl.clause_normal_form(Parser.main Lexer.token lexbuf));
       done
   with Parsing.Parse_error ->
     print_endline "Parsing error";

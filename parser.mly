@@ -1,5 +1,5 @@
 %{
-  let consts_set = ref Fol.CharSet.empty;;
+  let consts_set = ref Util.CharSet.empty;;
   module ArityMap = Map.Make(struct type t = char let compare = compare end);;
   let arities = ref ArityMap.empty;;
 %}
@@ -18,7 +18,7 @@
 %left EXISTS FORALL
 %nonassoc NOT
 %start main
-%type <(Fol.formula * Fol.CharSet.t)> main
+%type <(Fol.formula * Util.CharSet.t)> main
 %%
 
 main:
@@ -44,12 +44,12 @@ formula:
 	  p
     }
   | FORALL LPAREN EXP_ID RPAREN LPAREN formula RPAREN{
-      if Fol.CharSet.mem $3 !consts_set then
+      if Util.CharSet.mem $3 !consts_set then
 	failwith (Printf.sprintf "Cannot quantify constant %c" $3)
       else Fol.Quantifier(Fol.Forall, $3, $6)
     }
   | EXISTS LPAREN EXP_ID RPAREN LPAREN formula RPAREN {
-      if Fol.CharSet.mem $3 !consts_set then
+      if Util.CharSet.mem $3 !consts_set then
 	failwith (Printf.sprintf "Cannot quantify constant %c" $3)
       else Fol.Quantifier(Fol.Exists, $3, $6)
     }
@@ -71,13 +71,13 @@ expr:
        arities := (ArityMap.add $1 ar !arities);
        f
   }
-  | EXP_ID { if Fol.CharSet.mem $1 !consts_set then Fol.Constant($1)
+  | EXP_ID { if Util.CharSet.mem $1 !consts_set then Fol.Constant($1)
 	     else Fol.Var($1)
 	   }
 ;
 consts_args:
-  EXP_ID { consts_set := (Fol.CharSet.add $1 !consts_set) }
-  | EXP_ID COMMA consts_args { consts_set := (Fol.CharSet.add $1 !consts_set); $3 }
+  EXP_ID { consts_set := (Util.CharSet.add $1 !consts_set) }
+  | EXP_ID COMMA consts_args { consts_set := (Util.CharSet.add $1 !consts_set); $3 }
 consts:
   CONST LPAREN consts_args RPAREN { $3 }
 ;
