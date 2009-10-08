@@ -12,7 +12,7 @@
 %token COMMA
 %token OR AND NOT IMP
 %token EXISTS FORALL
-%right IMP
+%nonassoc IMP
 %left OR
 %left AND
 %left EXISTS FORALL
@@ -43,7 +43,7 @@ formula:
 	  arities := (ArityMap.add $1 ar !arities);
 	  p
     }
-  | FORALL LPAREN EXP_ID RPAREN LPAREN formula RPAREN{
+  | FORALL LPAREN EXP_ID RPAREN LPAREN formula RPAREN {
       if Util.CharSet.mem $3 !consts_set then
 	failwith (Printf.sprintf "Cannot quantify constant %c" $3)
       else Fol.Quantifier(Fol.Forall, $3, $6)

@@ -1,6 +1,6 @@
 open Util
 
-(* non-empty arguments list of a function or predicate *)
+(* non-empty argument list of a function or predicate *)
 type 'a arguments = Arg of 'a | Arguments of 'a * 'a arguments;;
 
 (* a logical term is either(variable or constant) an atomic term or a function *)
@@ -56,7 +56,7 @@ let rec formula_to_str formula =
     | Quantifier(Exists, c, f) -> "Exists(" ^ Char.escaped(c) ^ ")" ^ "(" ^ formula_to_str(f) ^ ")"
     | Quantifier(Forall, c, f) -> "Forall(" ^ Char.escaped(c) ^ ")" ^ "(" ^ formula_to_str(f) ^ ")";;
 
-(* Set of variable simbols that appear in the arguments *)
+(* Set of variable simbols that appear in the arguments of a function or predicate *)
 let rec argument_variables =
   function Arg(t) ->
     (match t with
@@ -93,7 +93,7 @@ let rec argument_symbols =
 	CharSet.add f (CharSet.union (argument_symbols(args)) (argument_symbols(rest)))
 ;;
 
-(* set of function, variables and constants symbols
+(* set of function, variable and constant symbols
    used in a formula *)
 let rec term_symbols  =
   function Atom(c, args) -> argument_symbols(args)
@@ -103,7 +103,7 @@ let rec term_symbols  =
     | Quantifier(q, c, f) -> CharSet.add c (term_symbols f)
 ;;
 
-(* set of constants symbols *)
+(* set of constant symbols *)
 let rec constants formula =
   let rec cons_args =
     function Arg (Constant c) -> CharSet.add c CharSet.empty
@@ -126,7 +126,7 @@ let rec constants formula =
 type substitution = {v : char; sv : term};;
 
 (* applies a list of variable to term substitution
-   to the predicates arguments *)
+   to the predicate's arguments *)
 let rec apply_substitution subs =
   function Arg(t) ->
     (match t with

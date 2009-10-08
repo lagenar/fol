@@ -38,8 +38,8 @@ let rec move_not_inwards  =
 ;;
 
 (* Existentially quantifies the appearences of free variables in
-   a formula. Producing a new formula that preserves satisfiability
-   but not necessarily preserves equivalence *)
+   a formula. Producing a new formula that preserves satisfiability.
+*)
 let rec quantify_free_variables formula bound_vars =
   let quant_free free_vars f =
     CharSet.fold (fun c t -> Quantifier(Exists, c, t)) free_vars f
@@ -57,7 +57,7 @@ let rec quantify_free_variables formula bound_vars =
 
 (* A logical formula is in negation normal form if negation occurs
    only immediately above elementary propositions and {~, v, ^} are
-   the only allowed Boolean connectives
+   the only allowed Boolean connectives.
 *)
 let negation_normal_form formula =
   quantify_free_variables
@@ -111,7 +111,7 @@ let rec miniscope =
 
 (* renames variables such that the ocurrences of
    cuantifiers bind different variable symbols *)
-let rename_variables constant_symbols formula =
+let rename_variables unused_symbols formula =
   let rec ren formula subs unused_symbols =
     match formula with
 	Atom(c, args) -> (Atom(c, apply_substitution subs args), unused_symbols)
@@ -127,33 +127,13 @@ let rename_variables constant_symbols formula =
 	  let r = ren f (sub::subs) (List.tl unused_symbols) in
 	    (Quantifier(q, List.hd unused_symbols, fst r), snd r)
   in
-    fst ( ren formula [] (CharSet.elements(CharSet.diff alpha_set
-					     (CharSet.union constant_symbols
-						(term_symbols formula)))))
+    ren formula [] unused_symbols
 ;;
 
-(* renames variables such that the ocurrences of
-   cuantifiers bind different variable symbols *)
-let rename_variables constant_symbols formula =
-  let rec ren formula subs unused_symbols =
-    match formula with
-	Atom(c, args) -> (Atom(c, apply_substitution subs args), unused_symbols)
-      | Connective(c, f1, f2) ->
-	  let r1 = ren f1 subs unused_symbols in
-	  let r2 = ren f2 subs (snd r1) in
-	    (Connective(c, fst r1, fst r2), snd r2)
-      | Not(f) ->
-	  let r = ren f subs unused_symbols in
-	    (Not(fst r), snd r)
-      | Quantifier(q, c, f) ->
-	  let sub = {v=c; sv=Var(List.hd unused_symbols)} in
-	  let r = ren f (sub::subs) (List.tl unused_symbols) in
-	    (Quantifier(q, List.hd unused_symbols, fst r), snd r)
-  and unused_symbols = CharSet.elements (CharSet.diff alpha_set
-					   (CharSet.union constant_symbols
-					      (term_symbols formula)))
-  in
-    fst ( ren formula [] unused_symbols)
+let unused_symbols constant_symbols formula =
+  CharSet.elements (CharSet.diff alpha_set
+		      (CharSet.union constant_symbols
+			 (term_symbols formula)))
 ;;
 
 (* Removes existential quantifiers by replacing
@@ -165,39 +145,37 @@ let skolemize constant_symbols formula =
     if (List.tl l) = [] then Arg(Var(List.hd l))
     else Arguments(Var(List.hd l), list_to_args (List.tl l))
   in
-   let rec skol f bound_vars subs unused_symbols =
+   let rec skol f bound_vars subs unused =
     match f with
 	Atom(c, args) ->
-	    (Atom(c, apply_substitution subs  args), unused_symbols)
+	    (Atom(c, apply_substitution subs  args), unused)
       | Connective(c, f1, f2) ->
-	  let r1 = skol f1 bound_vars subs unused_symbols in
+	  let r1 = skol f1 bound_vars subs unused in
 	  let r2 = skol f2 bound_vars subs (snd r1) in
 	    (Connective(c, fst r1, fst r2), snd r2)
       | Not(f) ->
-	  let r = skol f bound_vars subs unused_symbols in
+	  let r = skol f bound_vars subs unused in
 	    (Not(fst r), snd r)
       | Quantifier(Forall, c, f) ->
-	  let r = skol f (c::bound_vars) subs unused_symbols in
+	  let r = skol f (c::bound_vars) subs unused in
 	    (Quantifier(Forall, c, fst r), snd r)
       | Quantifier(Exists, c, f) ->
 	  let t =
 	    if bound_vars = [] then
-	      Constant(List.hd unused_symbols)
+	      Constant(List.hd unused)
 	    else
-	       FOLfunction(List.hd unused_symbols, list_to_args bound_vars) in
-	    skol f bound_vars ({v=c; sv=t}::subs) (List.tl unused_symbols)
-   and unused_symbols = CharSet.elements (CharSet.diff alpha_set
-					    (CharSet.union constant_symbols
-					       (term_symbols formula)))
-   and ren_f = rename_variables constant_symbols formula
+	       FOLfunction(List.hd unused, list_to_args bound_vars) in
+	    skol f bound_vars ({v=c; sv=t}::subs) (List.tl unused)
    in
-     fst(skol ren_f [] [] unused_symbols)
+   let ren_f, unused = rename_variables (unused_symbols constant_symbols formula) formula
+   in
+     fst(skol ren_f [] [] unused)
 ;;
 
 (* moves quantifiers outwards *)  
 let rec move_quant_outwards  =
   function
-      Atom(c, f) as a -> a
+      Atom(_, _) as a -> a
     | Not(f) -> Not(move_quant_outwards f)
     | Connective(con, Quantifier(q, c, f1), f2)
     | Connective(con, f2, Quantifier(q, c, f1)) ->
@@ -249,7 +227,6 @@ let clause_normal_form (formula, constant_symbols) =
 		  negation_normal_form formula))))
 ;;
 
-(* clause normal form formula's list of clauses *)					 
 let rec clauses formula =
   match formula with
       Connective(And, f1, f2) -> (clauses f1) @ (clauses f2)
