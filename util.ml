@@ -1,3 +1,6 @@
+(** Utils *)
+
+(** set of characters *)
 module CharSet = Set.Make(struct type t = char let compare = compare end);;
 
 let alpha_set =
