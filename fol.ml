@@ -35,26 +35,33 @@ and args_to_str args =
       Arg(t) -> term_to_str(t)
     | Arguments(t, rest) -> term_to_str(t) ^ "," ^ args_to_str(rest);;
 
+let precedence f =
+  match f with
+      Atom(_) -> 5
+    | Not(_) -> 4
+    | Connective(And,_,_) -> 3
+    | Connective(Or,_,_) -> 2
+    | Connective(Imp,_,_) -> 1
+    | Quantifier(_) -> 0
+;;
+
 let rec formula_to_str formula =
-  match formula with
-      Atom(c, args) -> Char.escaped(c) ^ "(" ^ args_to_str(args) ^ ")"
-    | Not(f) -> (match f with
-	  Atom _ | Quantifier _ -> "~" ^ formula_to_str(f)
-	| _ -> "~" ^ "(" ^ formula_to_str(f) ^ ")")
-    | Connective(And, f1, f2) -> 
-	let paren f = (match f with
-			   Connective(Imp, _, _)
-			 | Connective(Or, _, _) -> "(" ^ formula_to_str(f) ^ ")"
-			 | _ -> formula_to_str(f)) in
-	  paren(f1) ^ " ^ " ^ paren(f2)
-    | Connective(Or, f1, f2) ->
-	let paren f = (match f with
-			   Connective(Imp, _, _) -> "(" ^ formula_to_str(f) ^ ")"
-			 | _ -> formula_to_str(f)) in
-	  paren(f1) ^ " v " ^ paren(f2)
-    | Connective(Imp, f1, f2) -> formula_to_str(f1) ^ " => " ^ formula_to_str(f2)
-    | Quantifier(Exists, c, f) -> "Exists(" ^ Char.escaped(c) ^ ")" ^ "(" ^ formula_to_str(f) ^ ")"
-    | Quantifier(Forall, c, f) -> "Forall(" ^ Char.escaped(c) ^ ")" ^ "(" ^ formula_to_str(f) ^ ")";;
+  let prec_formula = precedence formula in
+  let paren f =
+    let s_f = formula_to_str f in
+      if prec_formula > precedence f then "(" ^ s_f ^ ")"  else s_f
+  in
+    match formula with
+	Atom(c, args) -> Char.escaped(c) ^ "(" ^ args_to_str(args) ^ ")"
+      | Not(f) -> "~" ^ paren f
+      | Connective(And, f1, f2) -> 
+	  paren f1 ^ " ^ " ^ paren f2	  
+      | Connective(Or, f1, f2) ->
+	    paren f1 ^ " v " ^ paren f2
+      | Connective(Imp, f1, f2) -> paren f1 ^ " => " ^ paren f2
+      | Quantifier(Exists, c, f) -> "Exists(" ^ Char.escaped(c) ^ ")" ^ "(" ^ formula_to_str(f) ^ ")"
+      | Quantifier(Forall, c, f) -> "Forall(" ^ Char.escaped(c) ^ ")" ^ "(" ^ formula_to_str(f) ^ ")"
+;;
 
 (* Set of variable simbols that appear in the arguments of a function or predicate *)
 let rec argument_variables =
