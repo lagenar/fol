@@ -1,39 +1,34 @@
 open Util
 
-(* non-empty argument list of a function or predicate *)
-type 'a arguments = Arg of 'a | Arguments of 'a * 'a arguments;;
-
-(* a logical term is either(variable or constant) an atomic term or a function *)
 type term = Var of char
-	    | Constant of char
-	    | FOLfunction of char * term arguments;;
+	    | FOLfunction of char * term list;;
 
 type connective = And | Or | Imp;;
 type quantifier = Exists | Forall;;
 
 (* a first order logic formula *)
-type formula = Atom of char * term arguments
+type formula = Atom of char * term list
 	       | Connective of connective * formula * formula
 	       | Not of formula
 	       | Quantifier of quantifier * char * formula
 ;;
 
 (* number of arguments of a function or predicate *)
-let rec arity args =
-  match args with
-      Arg(_) -> 1
-    | Arguments(_, tl) -> 1 + arity(tl)
+let rec arity (args : term list) =
+  List.length args
 ;;
 
 let rec term_to_str t =
   match t with
       Var(c) -> Char.escaped(c)
-    | Constant(c) -> Char.escaped(c)
+    | FOLfunction(c, []) -> Char.escaped(c)
     | FOLfunction(c, args) -> Char.escaped(c) ^ "(" ^ args_to_str(args) ^ ")"
 and args_to_str args =
   match args with
-      Arg(t) -> term_to_str(t)
-    | Arguments(t, rest) -> term_to_str(t) ^ "," ^ args_to_str(rest);;
+      [] -> ""
+    | x::[] -> term_to_str(x)
+    | x::xs -> term_to_str(x) ^ "," ^ args_to_str(xs)
+;;
 
 let precedence f =
   match f with
@@ -52,7 +47,8 @@ let rec formula_to_str formula =
       if prec_formula > precedence f then "(" ^ s_f ^ ")"  else s_f
   in
     match formula with
-	Atom(c, args) -> Char.escaped(c) ^ "(" ^ args_to_str(args) ^ ")"
+	Atom(c, []) -> Char.escaped(c)
+      |	Atom(c, args) -> Char.escaped(c) ^ "(" ^ args_to_str(args) ^ ")"
       | Not(f) -> "~" ^ paren f
       | Connective(And, f1, f2) -> 
 	  paren f1 ^ " ^ " ^ paren f2	  
@@ -65,15 +61,11 @@ let rec formula_to_str formula =
 
 (* Set of variable simbols that appear in the arguments of a function or predicate *)
 let rec argument_variables =
-  function Arg(t) ->
-    (match t with
-	 Var(c) -> CharSet.add c CharSet.empty
-       | FOLfunction(_, args) -> argument_variables args
-       | _ -> CharSet.empty)
-    | Arguments(Var(c), rest) -> CharSet.add c (argument_variables rest)
-    | Arguments(Constant(c), rest) -> argument_variables rest
-    | Arguments(FOLfunction(_, args), rest) ->
-	CharSet.union (argument_variables(args)) (argument_variables(rest))
+  function
+    | [] -> CharSet.empty
+    | Var(x)::xs -> CharSet.add x (argument_variables xs)
+    | FOLfunction(f, args)::xs ->
+	CharSet.union (argument_variables args) (argument_variables xs)
 ;;
 
 (* set of free variable symbols(that are not in
@@ -89,15 +81,11 @@ let rec free_variables =
 (* set of symbols(functions, vars and constants)
    used as arguments to a predicate *)
 let rec argument_symbols =
-  function Arg(t) ->
-    (match t with
-	 Var(c) -> CharSet.add c CharSet.empty
-       | FOLfunction(f, args) -> CharSet.add f (argument_symbols args)
-       | Constant(c) -> CharSet.add c CharSet.empty)
-    | Arguments(Var(c), rest) -> CharSet.add c (argument_symbols rest)
-    | Arguments(Constant(c), rest) -> CharSet.add c (argument_symbols rest)
-    | Arguments(FOLfunction(f, args), rest) ->
-	CharSet.add f (CharSet.union (argument_symbols(args)) (argument_symbols(rest)))
+    function
+    | [] -> CharSet.empty
+    | Var(x)::xs -> CharSet.add x (argument_symbols xs)
+    | FOLfunction(f, args)::xs ->
+	CharSet.add f (CharSet.union (argument_symbols args) (argument_symbols xs))
 ;;
 
 (* set of function, variable and constant symbols
@@ -113,14 +101,13 @@ let rec term_symbols  =
 (* set of constant symbols *)
 let rec constants formula =
   let rec cons_args =
-    function Arg (Constant c) -> CharSet.add c CharSet.empty
-      | Arg(FOLfunction(f, args)) -> cons_args(args)
-      | Arg(_) -> CharSet.empty
-      | Arguments(Constant c, rest) ->
-	  CharSet.add c (cons_args rest)
-      | Arguments(FOLfunction(f, args), rest) ->
-	  CharSet.union (cons_args args) (cons_args rest)
-      | Arguments(_, rest) -> cons_args rest
+    function
+    | [] -> CharSet.empty
+    | Var(x)::xs -> CharSet.empty
+    | FOLfunction(f, [])::xs ->
+	CharSet.add f (cons_args xs)
+    | FOLfunction(f, args)::xs ->
+	CharSet.union (cons_args args) (cons_args xs)
   in
     match formula with
 	Not(f) -> constants(f)
@@ -135,22 +122,15 @@ type substitution = {v : char; sv : term};;
 (* applies a list of variable to term substitution
    to the predicate's arguments *)
 let rec apply_substitution subs =
-  function Arg(t) ->
-    (match t with
-	 Var(c) ->
-	   (try
-	      Arg(List.find (fun x -> x.v = c) subs).sv
-	    with _ -> Arg(t))
-       | FOLfunction(f, args) -> Arg(FOLfunction(f, apply_substitution subs args))
-       | _ -> Arg(t))
-    | Arguments(Var(c), rest) ->
-	(try
-	   Arguments((List.find (fun x -> x.v = c) subs).sv,
-		     apply_substitution subs rest)
-	with _ -> Arguments(Var(c), apply_substitution subs rest))
-    | Arguments(Constant(c), rest) ->
-	Arguments(Constant(c), apply_substitution subs rest)
-    | Arguments(FOLfunction(f, args), rest) ->
-	Arguments(FOLfunction(f, apply_substitution subs args),
-		 apply_substitution subs rest)
-;;
+  function
+    | [] -> []
+    | x::xs ->	
+	let s_x = (match x with
+		       Var(c) ->
+			 (try (List.find (fun t -> t.v = c) subs).sv
+			  with _ -> x)
+		     | FOLfunction(f, args) ->
+			 FOLfunction (f, apply_substitution subs args))
+	in
+	  s_x::(apply_substitution subs xs)
+;;	  

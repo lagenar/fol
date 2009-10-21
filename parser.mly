@@ -55,8 +55,8 @@ formula:
     }
 ;
 args:
-  expr COMMA args { Fol.Arguments($1, $3) }
-  | expr { Fol.Arg($1) }
+  expr COMMA args { $1::$3 }
+  | expr { [$1] }
 ;
 expr:
   EXP_ID LPAREN args RPAREN {
@@ -71,7 +71,7 @@ expr:
        arities := (ArityMap.add $1 ar !arities);
        f
   }
-  | EXP_ID { if Util.CharSet.mem $1 !consts_set then Fol.Constant($1)
+  | EXP_ID { if Util.CharSet.mem $1 !consts_set then Fol.FOLfunction($1, [])
 	     else Fol.Var($1)
 	   }
 ;

@@ -142,8 +142,7 @@ let unused_symbols constant_symbols formula =
 *)
 let skolemize constant_symbols formula =
   let rec list_to_args l =
-    if (List.tl l) = [] then Arg(Var(List.hd l))
-    else Arguments(Var(List.hd l), list_to_args (List.tl l))
+    List.map (fun x -> Var x) l
   in
    let rec skol f bound_vars subs unused =
     match f with
@@ -160,11 +159,7 @@ let skolemize constant_symbols formula =
 	  let r = skol f (c::bound_vars) subs unused in
 	    (Quantifier(Forall, c, fst r), snd r)
       | Quantifier(Exists, c, f) ->
-	  let t =
-	    if bound_vars = [] then
-	      Constant(List.hd unused)
-	    else
-	       FOLfunction(List.hd unused, list_to_args bound_vars) in
+	  let t = FOLfunction(List.hd unused, list_to_args bound_vars) in
 	    skol f bound_vars ({v=c; sv=t}::subs) (List.tl unused)
    in
    let ren_f, unused = rename_variables (unused_symbols constant_symbols formula) formula
