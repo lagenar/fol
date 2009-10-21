@@ -1,3 +1,4 @@
+
 open Fol
 open Util
 
@@ -40,19 +41,11 @@ let rec move_not_inwards  =
 (* Existentially quantifies the appearences of free variables in
    a formula. Producing a new formula that preserves satisfiability.
 *)
-let rec quantify_free_variables formula bound_vars =
+let quantify_free_variables formula =
   let quant_free free_vars f =
     CharSet.fold (fun c t -> Quantifier(Exists, c, t)) free_vars f
   in
-    match formula with
-	Atom(c, args) as p ->
-	  quant_free (CharSet.diff (free_variables p) bound_vars) p
-      | Not(f) -> Not (quantify_free_variables f bound_vars)
-      | Connective(c, f1, f2) ->
-	  Connective(c, (quantify_free_variables f1 bound_vars),
-		     (quantify_free_variables f2 bound_vars))
-      | Quantifier(q, c, f) ->
-	  Quantifier(q, c, quantify_free_variables f (CharSet.add c bound_vars))
+    quant_free (free_variables formula) formula
 ;;
 
 (* A logical formula is in negation normal form if negation occurs
@@ -63,7 +56,7 @@ let negation_normal_form formula =
   quantify_free_variables
     (move_not_inwards
        (implication_simplify formula))
-    CharSet.empty;;
+;;
   
 (* Rules:
    Exists(x)(f1 v f2) = Exists(x)(f1) v f2  if not x in free(f2)
