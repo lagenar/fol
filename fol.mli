@@ -30,6 +30,9 @@ val argument_variables : term arguments -> Util.CharSet.t
 (** set of free variable symbols *)
 val free_variables : formula -> Util.CharSet.t
 
+(** set of bound variable symbols *)
+val bound_variables : formula -> Util.CharSet.t
+
 (** set of function, variable and constant symbols in the arguments of a predicate or function*)
 val argument_symbols : term arguments -> Util.CharSet.t
 

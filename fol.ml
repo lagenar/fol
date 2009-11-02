@@ -86,6 +86,16 @@ let rec free_variables =
     | Quantifier(q, c, f) -> CharSet.remove c (free_variables f)
 ;;
 
+(* set of bound variable symbols *)
+let rec bound_variables =
+  function
+    | Connective(c, f1, f2) ->
+	CharSet.union (bound_variables f1) (bound_variables f2)
+    | Not(f) -> bound_variables f
+    | Quantifier(q, c, f) -> CharSet.add c (bound_variables f)
+    | _ -> CharSet.empty
+;;
+
 (* set of symbols(functions, vars and constants)
    used as arguments to a predicate *)
 let rec argument_symbols =

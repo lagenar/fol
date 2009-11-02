@@ -46,12 +46,17 @@ formula:
   | FORALL LPAREN EXP_ID RPAREN LPAREN formula RPAREN {
       if Util.CharSet.mem $3 !consts_set then
 	failwith (Printf.sprintf "Cannot quantify constant %c" $3)
+      else if Util.CharSet.mem $3 (Fol.bound_variables $6) then
+	failwith (Printf.sprintf "Doubly quantified variable %c" $3)
       else Fol.Quantifier(Fol.Forall, $3, $6)
     }
   | EXISTS LPAREN EXP_ID RPAREN LPAREN formula RPAREN {
       if Util.CharSet.mem $3 !consts_set then
 	failwith (Printf.sprintf "Cannot quantify constant %c" $3)
-      else Fol.Quantifier(Fol.Exists, $3, $6)
+      else if Util.CharSet.mem $3 (Fol.bound_variables $6) then
+	failwith (Printf.sprintf "Doubly quantified variable %c" $3)
+      else
+	Fol.Quantifier(Fol.Exists, $3, $6)
     }
 ;
 args:
