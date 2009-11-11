@@ -14,7 +14,7 @@ rule token = parse
   | ['a'-'z'] as e { EXP_ID(e) }
   | ['^']      { AND }
   | ['~']      { NOT }
-  | "=>"     { IMP }
+  | "->"     { IMP }
   | "Exists" { EXISTS }
   | "ForAll" { FORALL }
   | "Const" {CONST}
