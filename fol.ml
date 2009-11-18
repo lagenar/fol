@@ -1,16 +1,16 @@
 open Util
 
-type term = Var of char
-	    | FOLfunction of char * term list;;
+type term = Var of string
+	    | FOLfunction of string * term list;;
 
 type connective = And | Or | Imp;;
 type quantifier = Exists | Forall;;
 
 (* a first order logic formula *)
-type formula = Atom of char * term list
+type formula = Atom of string * term list
 	       | Connective of connective * formula * formula
 	       | Not of formula
-	       | Quantifier of quantifier * char * formula
+	       | Quantifier of quantifier * string * formula
 ;;
 
 (* number of arguments of a function or predicate *)
@@ -20,9 +20,9 @@ let rec arity (args : term list) =
 
 let rec term_to_str t =
   match t with
-      Var(c) -> Char.escaped(c)
-    | FOLfunction(c, []) -> Char.escaped(c)
-    | FOLfunction(c, args) -> Char.escaped(c) ^ "(" ^ args_to_str(args) ^ ")"
+      Var(v) -> v
+    | FOLfunction(f, []) -> f
+    | FOLfunction(f, args) -> f ^ "(" ^ args_to_str(args) ^ ")"
 and args_to_str args =
   match args with
       [] -> ""
@@ -47,87 +47,89 @@ let rec formula_to_str formula =
       if prec_formula > precedence f then "(" ^ s_f ^ ")"  else s_f
   in
     match formula with
-	Atom(c, []) -> Char.escaped(c)
-      |	Atom(c, args) -> Char.escaped(c) ^ "(" ^ args_to_str(args) ^ ")"
+	Atom(atom, []) -> atom
+      |	Atom(atom, args) -> atom ^ "(" ^ args_to_str(args) ^ ")"
       | Not(f) -> "~" ^ paren f
       | Connective(And, f1, f2) -> 
-	  paren f1 ^ " ^ " ^ paren f2	  
+	  paren f1 ^ " & " ^ paren f2	  
       | Connective(Or, f1, f2) ->
-	    paren f1 ^ " v " ^ paren f2
+	    paren f1 ^ " | " ^ paren f2
       | Connective(Imp, f1, f2) -> paren f1 ^ " => " ^ paren f2
-      | Quantifier(Exists, c, f) -> "Exists(" ^ Char.escaped(c) ^ ")" ^ "(" ^ formula_to_str(f) ^ ")"
-      | Quantifier(Forall, c, f) -> "Forall(" ^ Char.escaped(c) ^ ")" ^ "(" ^ formula_to_str(f) ^ ")"
+      | Quantifier(Exists, v, f) -> "? [" ^ v ^ "] :" ^ "(" ^ formula_to_str(f) ^ ")" (*FIX*)
+      | Quantifier(Forall, v, f) -> "! [" ^ v ^ "] :" ^ "(" ^ formula_to_str(f) ^ ")"
 ;;
 
-(* Set of variable simbols that appear in the arguments of a function or predicate *)
+(* Set of variable identifiers that appear in the arguments of a function or predicate *)
 let rec argument_variables =
   function
-    | [] -> CharSet.empty
-    | Var(x)::xs -> CharSet.add x (argument_variables xs)
+    | [] -> StringSet.empty
+    | Var(x)::xs -> StringSet.add x (argument_variables xs)
     | FOLfunction(f, args)::xs ->
-	CharSet.union (argument_variables args) (argument_variables xs)
+	StringSet.union (argument_variables args) (argument_variables xs)
 ;;
 
-(* set of free variable symbols(that are not in
+(* set of free variable identifiers(that are not in
    a quantifier scope *)
 let rec free_variables =
-  function Atom(c, args) -> argument_variables(args)
+  function
+      Atom(_, args) -> argument_variables(args)
     | Connective(c, f1, f2)  ->
-	CharSet.union (free_variables f1) (free_variables f2)	
+	StringSet.union (free_variables f1) (free_variables f2)	
     | Not(f) -> free_variables(f)
-    | Quantifier(q, c, f) -> CharSet.remove c (free_variables f)
+    | Quantifier(q, v, f) -> StringSet.remove v (free_variables f)
 ;;
 
-(* set of bound variable symbols *)
+(* set of bound variable identifiers *)
 let rec bound_variables =
   function
     | Connective(c, f1, f2) ->
-	CharSet.union (bound_variables f1) (bound_variables f2)
+	StringSet.union (bound_variables f1) (bound_variables f2)
     | Not(f) -> bound_variables f
-    | Quantifier(q, c, f) -> CharSet.add c (bound_variables f)
-    | _ -> CharSet.empty
+    | Quantifier(q, v, f) -> StringSet.add v (bound_variables f)
+    | _ -> StringSet.empty
 ;;
 
-(* set of symbols(functions, vars and constants)
+(* set of identifiers(functions, vars and constants)
    used as arguments to a predicate *)
-let rec argument_symbols =
+let rec argument_identifiers =
     function
-    | [] -> CharSet.empty
-    | Var(x)::xs -> CharSet.add x (argument_symbols xs)
+    | [] -> StringSet.empty
+    | Var(x)::xs -> StringSet.add x (argument_identifiers xs)
     | FOLfunction(f, args)::xs ->
-	CharSet.add f (CharSet.union (argument_symbols args) (argument_symbols xs))
+	StringSet.add f (StringSet.union (argument_identifiers args) (argument_identifiers xs))
 ;;
 
-(* set of function, variable and constant symbols
+(* set of function, variable and constant identifiers
    used in a formula *)
-let rec term_symbols  =
-  function Atom(c, args) -> argument_symbols(args)
+let rec term_identifiers  =
+  function
+      Atom(_, args) -> argument_identifiers(args)
     | Connective(c, f1, f2) ->
-	CharSet.union (term_symbols f1) (term_symbols f2)
-    | Not(f) -> term_symbols(f)
-    | Quantifier(q, c, f) -> CharSet.add c (term_symbols f)
+	StringSet.union (term_identifiers f1) (term_identifiers f2)
+    | Not(f) -> term_identifiers(f)
+    | Quantifier(q, v, f) -> StringSet.add v (term_identifiers f)
 ;;
 
-(* set of constant symbols *)
+(* set of constant identifiers *)
 let rec constants formula =
   let rec cons_args =
     function
-    | [] -> CharSet.empty
-    | Var(x)::xs -> CharSet.empty
+    | [] -> StringSet.empty
+    | Var(x)::xs -> StringSet.empty
     | FOLfunction(f, [])::xs ->
-	CharSet.add f (cons_args xs)
+	StringSet.add f (cons_args xs)
     | FOLfunction(f, args)::xs ->
-	CharSet.union (cons_args args) (cons_args xs)
+	StringSet.union (cons_args args) (cons_args xs)
   in
     match formula with
 	Not(f) -> constants(f)
-      | Atom(c, args) -> cons_args args
+      | Atom(_, args) -> cons_args args
       | Quantifier(_, _, f) -> constants f
       | Connective(_, f1, f2) ->
-	  CharSet.union (constants f1) (constants f2)
+	  StringSet.union (constants f1) (constants f2)
 ;;
 
-type substitution = {v : char; sv : term};;
+type substitution = {v : string; sv : term};;
 
 (* applies a list of variable to term substitution
    to the predicate's arguments *)

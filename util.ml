@@ -1,5 +1,7 @@
 (** Utils *)
 
+
+module StringSet = Set.Make (struct type t = string let compare = compare end);;
 (** set of characters *)
 module CharSet = Set.Make(struct type t = char let compare = compare end);;
 

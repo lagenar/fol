@@ -8,14 +8,16 @@ rule token = parse
   | ['\n']     { EOL }
   | ['(']      { LPAREN }
   | [')']      { RPAREN }
+  | ['[']      { LBRACKET }
+  | [']']      { RBRACKET }
   | [',']      { COMMA }
-  | ['A'-'Z'] as p  { PREDICATE(p) }
-  | ['v']      { OR }
-  | ['a'-'z'] as e { EXP_ID(e) }
-  | ['^']      { AND }
+  | [':']      { COLON }
+  | ['A'-'Z']('_' | ['a'-'z'])* as v  { VAR_ID(v) }
+  | ('_' | ['a'-'z'])+ as id { IDENTIFIER(id) }
+  | ['|']      { OR }
+  | ['&']      { AND }
   | ['~']      { NOT }
-  | "->"     { IMP }
-  | "Exists" { EXISTS }
-  | "ForAll" { FORALL }
-  | "Const" {CONST}
+  | "=>"     { IMP }
+  | "?" { EXISTS }
+  | "!" { FORALL }
   | eof        { raise Eof }

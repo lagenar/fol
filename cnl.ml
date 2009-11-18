@@ -1,4 +1,3 @@
-
 open Fol
 open Util
 
@@ -43,7 +42,7 @@ let rec move_not_inwards  =
 *)
 let quantify_free_variables formula =
   let quant_free free_vars f =
-    CharSet.fold (fun c t -> Quantifier(Exists, c, t)) free_vars f
+    StringSet.fold (fun x t -> Quantifier(Exists, x, t)) free_vars f
   in
     quant_free (free_variables formula) formula
 ;;
@@ -81,11 +80,11 @@ let rec miniscope =
 	       Connective(con, f1, f2) ->
 		 let freef1 = free_variables f1 and
 		     freef2 = free_variables f2 in
-		   if not (CharSet.mem  c freef1) && not (CharSet.mem c freef2) then
+		   if not (StringSet.mem  c freef1) && not (StringSet.mem c freef2) then
 		     Connective(con, miniscope(f1), miniscope(f2))
-		   else if not (CharSet.mem c freef2) then
+		   else if not (StringSet.mem c freef2) then
 		     Connective(con, miniscope(Quantifier(q, c, f1)), f2)
-		   else if not (CharSet.mem c freef1) then
+		   else if not (StringSet.mem c freef1) then
 		     Connective(con, f1, miniscope(Quantifier(q, c, f2)))
 		   else
 		     (match (q,con) with
@@ -103,61 +102,56 @@ let rec miniscope =
 ;;
 
 (* renames variables such that the ocurrences of
-   cuantifiers bind different variable symbols *)
-let rename_variables unused_symbols formula =
-  let rec ren formula subs unused_symbols =
+   quantifiers bind different variable symbols *)
+let rename_variables formula =
+  let rec ren formula subs n =
     match formula with
-	Atom(c, args) -> (Atom(c, apply_substitution subs args), unused_symbols)
+	Atom(a, args) -> (Atom(a, apply_substitution subs args), n)
       | Connective(c, f1, f2) ->
-	  let r1 = ren f1 subs unused_symbols in
+	  let r1 = ren f1 subs n in
 	  let r2 = ren f2 subs (snd r1) in
 	    (Connective(c, fst r1, fst r2), snd r2)
       | Not(f) ->
-	  let r = ren f subs unused_symbols in
+	  let r = ren f subs n in
 	    (Not(fst r), snd r)
       | Quantifier(q, c, f) ->
-	  let sub = {v=c; sv=Var(List.hd unused_symbols)} in
-	  let r = ren f (sub::subs) (List.tl unused_symbols) in
-	    (Quantifier(q, List.hd unused_symbols, fst r), snd r)
+	  let rep = "V" ^ string_of_int(n) ^ "_" ^ c in
+	  let sub = {v=c; sv=Var(rep)} in
+	  let r = ren f (sub::subs) (n+1) in
+	    (Quantifier(q, rep, fst r), snd r)
   in
-    ren formula [] unused_symbols
-;;
-
-let unused_symbols constant_symbols formula =
-  CharSet.elements (CharSet.diff alpha_set
-		      (CharSet.union constant_symbols
-			 (term_symbols formula)))
+    ren formula [] 0
 ;;
 
 (* Removes existential quantifiers by replacing
    variables existentially quantified with new function
    or constant symbols
 *)
-let skolemize constant_symbols formula =
+let skolemize formula =
   let rec list_to_args l =
     List.map (fun x -> Var x) l
   in
-   let rec skol f bound_vars subs unused =
+   let rec skol f bound_vars subs n =
     match f with
-	Atom(c, args) ->
-	    (Atom(c, apply_substitution subs  args), unused)
+	Atom(a, args) ->
+	    (Atom(a, apply_substitution subs args), n)
       | Connective(c, f1, f2) ->
-	  let r1 = skol f1 bound_vars subs unused in
+	  let r1 = skol f1 bound_vars subs n in
 	  let r2 = skol f2 bound_vars subs (snd r1) in
 	    (Connective(c, fst r1, fst r2), snd r2)
       | Not(f) ->
-	  let r = skol f bound_vars subs unused in
+	  let r = skol f bound_vars subs n in
 	    (Not(fst r), snd r)
-      | Quantifier(Forall, c, f) ->
-	  let r = skol f (c::bound_vars) subs unused in
-	    (Quantifier(Forall, c, fst r), snd r)
-      | Quantifier(Exists, c, f) ->
-	  let t = FOLfunction(List.hd unused, list_to_args bound_vars) in
-	    skol f bound_vars ({v=c; sv=t}::subs) (List.tl unused)
+      | Quantifier(Forall, x, f) ->
+	  let r = skol f (x::bound_vars) subs n in
+	    (Quantifier(Forall, x, fst r), snd r)
+      | Quantifier(Exists, x, f) ->
+	  let t = FOLfunction("sk_f" ^ string_of_int(n), list_to_args bound_vars) in
+	    skol f bound_vars ({v=x; sv=t}::subs) (n+1)
    in
-   let ren_f, unused = rename_variables (unused_symbols constant_symbols formula) formula
+   let ren_f, n = rename_variables formula
    in
-     fst(skol ren_f [] [] unused)
+     fst(skol ren_f [] [] n)
 ;;
 
 (* moves quantifiers outwards *)  
@@ -169,7 +163,7 @@ let rec move_quant_outwards  =
     | Connective(con, f2, Quantifier(q, c, f1)) ->
 	let r1 = move_quant_outwards f1 in
 	let r2 = move_quant_outwards f2 in
-	  if not (CharSet.mem c (free_variables r2)) then
+	  if not (StringSet.mem c (free_variables r2)) then
 	    Quantifier(q, c, move_quant_outwards(Connective(con, r1, r2)))
 	  else
 	    Connective(con, r1, r2)
@@ -207,12 +201,12 @@ let rec distribute_or =
 	Quantifier(q, c, distribute_or f)
 ;;
 
-let clause_normal_form (formula, constant_symbols) =
+let clause_normal_form formula =
   distribute_or (
     move_quant_outwards
-      ( skolemize constant_symbols
-	      ( miniscope (
-		  negation_normal_form formula))))
+      ( skolemize 
+	  ( miniscope (
+	      negation_normal_form formula))))
 ;;
 
 let rec clauses formula =
@@ -228,12 +222,12 @@ let print_clauses formula =
   let print_constants lc =
     if lc = [] then print_endline "Const()"
     else begin
-      Printf.printf "Const(%c" (List.hd lc);
-      List.iter (fun x -> Printf.printf ",%c" x) (List.tl lc);
+      Printf.printf "Const(%s" (List.hd lc);
+      List.iter (fun x -> Printf.printf ",%s" x) (List.tl lc);
       print_endline ")"
     end
   in
-    print_constants (CharSet.elements (constants formula));
+    print_constants (StringSet.elements (constants formula));
     let cls = clauses formula in
       List.iter (fun x -> print_endline(formula_to_str x)) cls
 ;;
