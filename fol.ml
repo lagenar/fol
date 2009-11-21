@@ -129,6 +129,12 @@ let rec constants formula =
 
 type substitution = {v : char; sv : term};;
 
+(* applies a substitution to a variable *)
+let apply subs x = (List.find (fun s -> s.v = x) subs).sv
+
+(* check if a variable to term substitution is defined *)
+let defined subs x = List.exists (fun s -> s.v = x) subs;;
+
 (* applies a list of variable to term substitution
    to the predicate's arguments *)
 let rec apply_substitution subs =
@@ -137,7 +143,7 @@ let rec apply_substitution subs =
     | x::xs ->	
 	let s_x = (match x with
 		       Var(c) ->
-			 (try (List.find (fun t -> t.v = c) subs).sv
+			 (try apply subs c
 			  with _ -> x)
 		     | FOLfunction(f, args) ->
 			 FOLfunction (f, apply_substitution subs args))

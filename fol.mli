@@ -41,6 +41,12 @@ val constants : formula -> Util.CharSet.t
 (** a variable to term substitution *)
 type substitution = { v: char; sv : term }
 
+(** applies a substitution to a variable *)
+val apply : substitution list -> char -> term
+
+(** check if a variable to term substitution is defined *)
+val defined : substitution list -> char -> bool
+
 (** applies a list of substitutions to a predicate's arguments *)
 val apply_substitution : substitution list -> term list -> term list
 
