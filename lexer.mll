@@ -11,13 +11,12 @@ rule token = parse
   | ['[']      { LBRACKET }
   | [']']      { RBRACKET }
   | [',']      { COMMA }
-  | [':']      { COLON }
+  | "Exists" { EXISTS }
+  | "Forall" { FORALL }
   | ['A'-'Z']('_' | ['a'-'z'])* as v  { VAR_ID(v) }
   | ('_' | ['a'-'z'])+ as id { IDENTIFIER(id) }
   | ['|']      { OR }
   | ['&']      { AND }
   | ['~']      { NOT }
   | "=>"     { IMP }
-  | "?" { EXISTS }
-  | "!" { FORALL }
   | eof        { raise Eof }

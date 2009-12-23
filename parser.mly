@@ -35,8 +35,8 @@ formula:
   | NOT formula { Fol.Not($2) }
   | IDENTIFIER LPAREN args RPAREN { Fol.Atom($1, $3) }
   | LPAREN formula RPAREN { $2 }
-  | FORALL LBRACKET variable_list RBRACKET COLON LPAREN formula RPAREN { mk_quant (Fol.Forall) $3 $7 }
-  | EXISTS LBRACKET variable_list RBRACKET COLON LPAREN formula RPAREN { mk_quant (Fol.Exists) $3 $7 }
+  | FORALL LBRACKET variable_list RBRACKET LPAREN formula RPAREN { mk_quant (Fol.Forall) $3 $6 }
+  | EXISTS LBRACKET variable_list RBRACKET LPAREN formula RPAREN { mk_quant (Fol.Exists) $3 $6 }
 ;
 
 args:

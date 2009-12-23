@@ -55,8 +55,8 @@ let rec formula_to_str formula =
       | Connective(Or, f1, f2) ->
 	    paren f1 ^ " | " ^ paren f2
       | Connective(Imp, f1, f2) -> paren f1 ^ " => " ^ paren f2
-      | Quantifier(Exists, v, f) -> "? [" ^ v ^ "] :" ^ "(" ^ formula_to_str(f) ^ ")" (*FIX*)
-      | Quantifier(Forall, v, f) -> "! [" ^ v ^ "] :" ^ "(" ^ formula_to_str(f) ^ ")"
+      | Quantifier(Exists, v, f) -> "Exists[" ^ v ^ "]" ^ "(" ^ formula_to_str(f) ^ ")"
+      | Quantifier(Forall, v, f) -> "Forall[" ^ v ^ "]" ^ "(" ^ formula_to_str(f) ^ ")"
 ;;
 
 (* Set of variable identifiers that appear in the arguments of a function or predicate *)
