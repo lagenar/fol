@@ -21,9 +21,9 @@ Not es "~"
 
 Ejemplos de fórmulas
 
-Forall[x](p(X))
+Forall[X,Y](p(X,Y))
 p(X) ^ q(X) v g(G,f(Y))
 Exists[Y](Forall[X](P(X,Y) & ~Q(X,f(Y))))
 ~p(X) => e(Y)
-
+Exists[X](barber(X) & Forall[Y]((~shaves(Y,Y) => shaves(X,Y)) & (shaves(X,Y) => ~shaves(Y,Y))))
 
