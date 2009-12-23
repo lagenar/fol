@@ -219,15 +219,6 @@ let rec clauses formula =
 ;;
 
 let print_clauses formula =
-  let print_constants lc =
-    if lc = [] then print_endline "Const()"
-    else begin
-      Printf.printf "Const(%s" (List.hd lc);
-      List.iter (fun x -> Printf.printf ",%s" x) (List.tl lc);
-      print_endline ")"
-    end
-  in
-    print_constants (StringSet.elements (constants formula));
     let cls = clauses formula in
       List.iter (fun x -> print_endline(formula_to_str x)) cls
 ;;
