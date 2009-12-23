@@ -4,27 +4,26 @@ Dependencias:
 
 Compilar:
 
-./make
+make
+
+para crear un ejecutable nativo:
+make nc
 
 Ejecutar:
 ./main
 
 Formato:
+Variables comienzan con una letra mayúscula, funciones y predicados con minúscula.
+El or lógico es "|"
+El and es "&"
+Implica es "=>"
+Not es "~"
 
-Símbolos de función, constantes y variables
-van en minúscula
+Ejemplos de fórmulas
 
-Las constantes se definen antes de la formula
-ejemplo:
-Const(a,b,c)
-
-símbolos de predicados van en mayúscula
-
-ejemplos de fórmulas
-
-ForAll(x)(P(x))
-P(x) ^ Q(x) v G(g,f(y))
-Exists(y)(ForAll(x)(P(x,y) ^ ~Q(x,f(y))))
-~P(x) => E(y)
+Forall[x](p(X))
+p(X) ^ q(X) v g(G,f(Y))
+Exists[Y](Forall[X](P(X,Y) & ~Q(X,f(Y))))
+~p(X) => e(Y)
 
 

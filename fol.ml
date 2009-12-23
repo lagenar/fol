@@ -69,7 +69,7 @@ let rec argument_variables =
 ;;
 
 (* set of free variable identifiers(that are not in
-   a quantifier scope *)
+   a quantifier's scope *)
 let rec free_variables =
   function
       Atom(_, args) -> argument_variables(args)
@@ -138,17 +138,13 @@ let apply subs x = (List.find (fun s -> s.v = x) subs).sv
 let defined subs x = List.exists (fun s -> s.v = x) subs;;
 
 (* applies a list of variable to term substitution
-   to the predicate's arguments *)
+   to predicates arguments *)
 let rec apply_substitution subs =
   function
     | [] -> []
-    | x::xs ->	
-	let s_x = (match x with
-		       Var(c) ->
-			 (try apply subs c
-			  with _ -> x)
-		     | FOLfunction(f, args) ->
-			 FOLfunction (f, apply_substitution subs args))
-	in
-	  s_x::(apply_substitution subs xs)
-;;	  
+    | Var(x)::xs ->
+	(try apply subs x::apply_substitution subs xs
+	 with _ -> Var(x)::apply_substitution subs xs)
+    | FOLfunction(f, args)::xs ->
+	FOLfunction(f, apply_substitution subs args)::apply_substitution subs xs
+;;

@@ -115,7 +115,7 @@ let rename_variables formula =
 	  let r = ren f subs n in
 	    (Not(fst r), snd r)
       | Quantifier(q, c, f) ->
-	  let rep = "V" ^ string_of_int(n) ^ "_" ^ c in
+	  let rep = "X" ^ string_of_int(n) in
 	  let sub = {v=c; sv=Var(rep)} in
 	  let r = ren f (sub::subs) (n+1) in
 	    (Quantifier(q, rep, fst r), snd r)
@@ -146,12 +146,12 @@ let skolemize formula =
 	  let r = skol f (x::bound_vars) subs n in
 	    (Quantifier(Forall, x, fst r), snd r)
       | Quantifier(Exists, x, f) ->
-	  let t = FOLfunction("sk_f" ^ string_of_int(n), list_to_args bound_vars) in
+	  let t = FOLfunction("f" ^ string_of_int(n), list_to_args bound_vars) in
 	    skol f bound_vars ({v=x; sv=t}::subs) (n+1)
    in
-   let ren_f, n = rename_variables formula
+   let ren_f = fst (rename_variables formula)
    in
-     fst(skol ren_f [] [] n)
+     fst(skol ren_f [] [] 1)
 ;;
 
 (* moves quantifiers outwards *)  
