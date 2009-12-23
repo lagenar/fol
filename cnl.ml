@@ -137,7 +137,7 @@ let rename_variables formula =
 	  let r = ren f (sub::subs) (n+1) in
 	    (Quantifier(q, rep, fst r), snd r)
   in
-    ren formula [] 0
+    ren formula [] 1
 ;;
 
 (* Removes existential quantifiers by replacing
