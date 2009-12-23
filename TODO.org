@@ -1,0 +1,6 @@
+* Manejo de errores en el parser
+** TODO Errores de aridad.
+** TODO Errores de tipo de identificador.
+** TODO Errores de cuantificación de constantes.
+** TODO Errores de doble cuantificación de variables.
+   
