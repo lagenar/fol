@@ -28,8 +28,8 @@ rule token = parse
   | ['[']      { LBRACKET }
   | [']']      { RBRACKET }
   | [',']      { COMMA }
-  | "Exists" { EXISTS }
-  | "Forall" { FORALL }
+  | "exists" { EXISTS }
+  | "forall" { FORALL }
   | ['A'-'Z']('_' | ['a'-'z'])* as v  { VAR_ID(v) }
   | ('_' | ['a'-'z'])+ as id { IDENTIFIER(id) }
   | ['|']      { OR }
