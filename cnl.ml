@@ -18,7 +18,7 @@
 open Fol
 open Util
 
-(* transforms implications applying the rule a -> b = ~a v b *)
+(* Transforms implications applying the rule a -> b = ~a v b *)
 let rec implication_simplify formula =
   match formula with
       Connective(Imp, f1, f2) -> Connective(Or, Not(implication_simplify(f1)),
@@ -30,14 +30,14 @@ let rec implication_simplify formula =
     | _ -> formula
 ;;
 
-(*applies the rules:
-  double negation: ~~a = a
-  negated quantifiers:
-  ~Exists(x)P(x) = Forall(x)~P(x)
-  ~Forall(x)P(x) = Exists(x)~P(x)
-  de morgan laws:
-  ~(a v b) = ~a ^ ~b
-  ~(a ^ b) = ~a v ~b
+(* Applies the rules:
+   Double negation: ~~a = a
+   Negated quantifiers:
+     ~Exists(x)P(x) = Forall(x)~P(x)
+     ~Forall(x)P(x) = Exists(x)~P(x)
+   De Morgan laws:
+     ~(a v b) = ~a ^ ~b
+     ~(a ^ b) = ~a v ~b
 *)
 let rec move_not_inwards  =
   function
@@ -118,7 +118,7 @@ let rec miniscope =
     | f -> f
 ;;
 
-(* renames variables such that the ocurrences of
+(* Renames variables such that the ocurrences of
    quantifiers bind different variable symbols *)
 let rename_variables formula =
   let rec ren formula subs n =
@@ -142,7 +142,7 @@ let rename_variables formula =
 
 (* Removes existential quantifiers by replacing
    variables existentially quantified with new function
-   or constant symbols
+   or constant symbols. a.k.a: Skolemization.
 *)
 let skolemize formula =
   let rec list_to_args l =
@@ -171,7 +171,7 @@ let skolemize formula =
      fst(skol ren_f [] [] 1)
 ;;
 
-(* moves quantifiers outwards *)  
+(* Moves quantifiers outwards in the formula *)  
 let rec move_quant_outwards  =
   function
       Atom(_, _) as a -> a

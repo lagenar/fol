@@ -23,14 +23,14 @@ type term = Var of string
 type connective = And | Or | Imp;;
 type quantifier = Exists | Forall;;
 
-(* a first order logic formula *)
-type formula = Atom of string * term list
+(* A first order logic formula *)
+type formula =   Atom of string * term list
 	       | Connective of connective * formula * formula
 	       | Not of formula
 	       | Quantifier of quantifier * string * formula
 ;;
 
-(* number of arguments of a function or predicate *)
+(* Number of arguments of a function or predicate *)
 let rec arity (args : term list) =
   List.length args
 ;;
@@ -79,14 +79,14 @@ let rec formula_to_str formula =
 (* Set of variable identifiers that appear in the arguments of a function or predicate *)
 let rec argument_variables =
   function
-    | [] -> StringSet.empty
+      [] -> StringSet.empty
     | Var(x)::xs -> StringSet.add x (argument_variables xs)
     | FOLfunction(f, args)::xs ->
 	StringSet.union (argument_variables args) (argument_variables xs)
 ;;
 
-(* set of free variable identifiers(that are not in
-   a quantifier's scope *)
+(* Set of free variable identifiers(that are not in
+   a quantifier's scope) *)
 let rec free_variables =
   function
       Atom(_, args) -> argument_variables(args)
@@ -96,7 +96,7 @@ let rec free_variables =
     | Quantifier(q, v, f) -> StringSet.remove v (free_variables f)
 ;;
 
-(* set of bound variable identifiers *)
+(* Set of bound variable identifiers *)
 let rec bound_variables =
   function
     | Connective(c, f1, f2) ->
@@ -106,17 +106,17 @@ let rec bound_variables =
     | _ -> StringSet.empty
 ;;
 
-(* set of identifiers(functions, vars and constants)
+(* Set of identifiers(functions, vars and constants)
    used as arguments to a predicate *)
 let rec argument_identifiers =
     function
-    | [] -> StringSet.empty
-    | Var(x)::xs -> StringSet.add x (argument_identifiers xs)
-    | FOLfunction(f, args)::xs ->
-	StringSet.add f (StringSet.union (argument_identifiers args) (argument_identifiers xs))
+        [] -> StringSet.empty
+      | Var(x)::xs -> StringSet.add x (argument_identifiers xs)
+      | FOLfunction(f, args)::xs ->
+	  StringSet.add f (StringSet.union (argument_identifiers args) (argument_identifiers xs))
 ;;
 
-(* set of function, variable and constant identifiers
+(* Set of function, variable and constant identifiers
    used in a formula *)
 let rec term_identifiers  =
   function
@@ -127,16 +127,16 @@ let rec term_identifiers  =
     | Quantifier(q, v, f) -> StringSet.add v (term_identifiers f)
 ;;
 
-(* set of constant identifiers *)
+(* Set of constant identifiers *)
 let rec constants formula =
   let rec cons_args =
     function
-    | [] -> StringSet.empty
-    | Var(x)::xs -> StringSet.empty
-    | FOLfunction(f, [])::xs ->
-	StringSet.add f (cons_args xs)
-    | FOLfunction(f, args)::xs ->
-	StringSet.union (cons_args args) (cons_args xs)
+      | [] -> StringSet.empty
+      | Var(x)::xs -> StringSet.empty
+      | FOLfunction(f, [])::xs ->
+	  StringSet.add f (cons_args xs)
+      | FOLfunction(f, args)::xs ->
+	  StringSet.union (cons_args args) (cons_args xs)
   in
     match formula with
 	Not(f) -> constants(f)
@@ -148,17 +148,17 @@ let rec constants formula =
 
 type substitution = {v : string; sv : term};;
 
-(* applies a substitution to a variable *)
+(* Applies a substitution to a variable *)
 let apply subs x = (List.find (fun s -> s.v = x) subs).sv
 
-(* check if a variable to term substitution is defined *)
+(* Check if a variable to term substitution is defined *)
 let defined subs x = List.exists (fun s -> s.v = x) subs;;
 
-(* applies a list of variable to term substitution
-   to predicates arguments *)
+(* Applies a list of variable to term substitution
+   to a list of terms *)
 let rec apply_substitution subs =
   function
-    | [] -> []
+      [] -> []
     | Var(x)::xs ->
 	(try apply subs x::apply_substitution subs xs
 	 with _ -> Var(x)::apply_substitution subs xs)
