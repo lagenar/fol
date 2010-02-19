@@ -1,7 +1,0 @@
-* Manejo de errores en el parser
-** DONE Errores de aridad.
-   CLOSED: [2009-12-23 mié 11:56]
-** DONE Errores de tipo de identificador.
-   CLOSED: [2009-12-23 mié 11:56]
-** TODO Errores de doble cuantificación de variables.
-   

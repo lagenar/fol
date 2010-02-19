@@ -2,15 +2,15 @@ Dependencias:
  -- ocaml
  -- make
 
-Compilar:
+Compilación:
 
 make
 
-para crear un ejecutable nativo:
+Para crear un ejecutable nativo:
 make nc
 
 Ejecutar:
-./main
+./fol
 
 Formato:
 Variables comienzan con una letra mayúscula, funciones y predicados con minúscula.
@@ -19,11 +19,11 @@ El and es "&"
 Implica es "=>"
 Not es "~"
 
-Ejemplos de fórmulas
+Ejemplos de fórmulas:
 
-Forall[X,Y](p(X,Y))
+forall[X,Y](p(X,Y))
 p(X) ^ q(X) v g(G,f(Y))
-Exists[Y](Forall[X](P(X,Y) & ~Q(X,f(Y))))
+exists[Y](forall[X](P(X,Y) & ~Q(X,f(Y))))
 ~p(X) => e(Y)
-Exists[X](barber(X) & Forall[Y]((~shaves(Y,Y) => shaves(X,Y)) & (shaves(X,Y) => ~shaves(Y,Y))))
+exists[X](barber(X) & forall[Y]((~shaves(Y,Y) => shaves(X,Y)) & (shaves(X,Y) => ~shaves(Y,Y))))
 
